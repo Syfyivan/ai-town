@@ -1,5 +1,6 @@
 import { PixiComponent, applyDefaultProps } from '@pixi/react';
 import * as PIXI from 'pixi.js';
+import { FARM_TILE_FRAMES, addFarmTile, addFarmTileGrid } from './farmLifeTiles';
 
 type ArtStudioHotspotProps = {
   onOpenArtStudio: () => void;
@@ -17,77 +18,25 @@ export const ART_STUDIO_REGION = {
   height: 5,
 };
 
-function drawPixelRect(
-  graphics: PIXI.Graphics,
-  color: number,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-) {
-  graphics.beginFill(color);
-  graphics.drawRect(x, y, width, height);
-  graphics.endFill();
-}
-
 function buildArtStudioSprite(tileDim: number) {
   const width = ART_STUDIO_REGION.width * tileDim;
   const height = ART_STUDIO_REGION.height * tileDim;
   const container = new PIXI.Container() as ArtStudioHotspotContainer;
   const graphics = new PIXI.Graphics();
 
-  graphics.lineStyle(4, 0x181425, 1);
-  drawPixelRect(graphics, 0x181425, 0, tileDim * 1.1, width, height - tileDim * 1.1);
-  drawPixelRect(
-    graphics,
-    0xecd8a7,
-    tileDim * 0.45,
-    tileDim * 1.45,
-    width - tileDim * 0.9,
-    height - tileDim * 1.9,
-  );
-  drawPixelRect(
-    graphics,
-    0xb86f50,
-    tileDim,
-    tileDim * 1.85,
-    width - tileDim * 2,
-    height - tileDim * 2.45,
-  );
-
-  graphics.beginFill(0x6e2146);
-  graphics.drawPolygon([
-    tileDim * 0.1,
-    tileDim * 1.15,
-    width / 2,
-    tileDim * 0.05,
-    width - tileDim * 0.1,
-    tileDim * 1.15,
-    width - tileDim * 0.5,
-    tileDim * 1.55,
-    tileDim * 0.5,
-    tileDim * 1.55,
-  ]);
+  graphics.beginFill(0x181425, 0.34);
+  graphics.drawRect(tileDim * 1.05, tileDim * 4.5, tileDim * 5.85, tileDim * 0.36);
   graphics.endFill();
+  container.addChild(graphics);
 
-  drawPixelRect(graphics, 0xfec742, tileDim * 2.15, tileDim * 0.55, tileDim * 3.7, tileDim * 0.5);
-  drawPixelRect(graphics, 0x181425, tileDim * 1.15, tileDim * 2.35, tileDim * 1.45, tileDim * 1.9);
-  drawPixelRect(graphics, 0x3a4466, tileDim * 4.95, tileDim * 2.05, tileDim * 1.35, tileDim * 1.25);
-
-  graphics.lineStyle(3, 0x181425, 1);
-  graphics.beginFill(0xfff1c1);
-  graphics.drawRect(tileDim * 3.05, tileDim * 2.15, tileDim * 1.45, tileDim * 1.15);
-  graphics.endFill();
-  graphics.lineStyle(2, 0xdd7c42, 1);
-  graphics.moveTo(tileDim * 3.22, tileDim * 2.95);
-  graphics.lineTo(tileDim * 3.75, tileDim * 2.42);
-  graphics.lineTo(tileDim * 4.25, tileDim * 2.78);
-
-  graphics.lineStyle(3, 0x181425, 1);
-  graphics.moveTo(tileDim * 3.75, tileDim * 3.3);
-  graphics.lineTo(tileDim * 3.25, tileDim * 4.15);
-  graphics.moveTo(tileDim * 3.75, tileDim * 3.3);
-  graphics.lineTo(tileDim * 4.28, tileDim * 4.15);
+  const barnRows = Array.from({ length: 5 }, (_, row) =>
+    Array.from({ length: 5 }, (_, column) => FARM_TILE_FRAMES.barnFrontStart + row * 5 + column),
+  );
+  addFarmTileGrid(container, barnRows, tileDim, 1.5, 0);
+  addFarmTile(container, FARM_TILE_FRAMES.board, tileDim, 1.15, 3.35);
+  addFarmTile(container, FARM_TILE_FRAMES.flowerRed, tileDim, 0.85, 4.05);
+  addFarmTile(container, FARM_TILE_FRAMES.flowerBlue, tileDim, 6.15, 4.05);
+  addFarmTile(container, FARM_TILE_FRAMES.sign, tileDim, 3.5, 0.25);
 
   const sign = new PIXI.Text(
     '溪山画室',
@@ -100,7 +49,7 @@ function buildArtStudioSprite(tileDim: number) {
   );
   sign.anchor.set(0.5);
   sign.x = width / 2;
-  sign.y = tileDim * 0.83;
+  sign.y = tileDim * 0.6;
 
   const caption = new PIXI.Text(
     '临时工',
@@ -116,9 +65,8 @@ function buildArtStudioSprite(tileDim: number) {
   );
   caption.anchor.set(0.5);
   caption.x = width / 2;
-  caption.y = tileDim * 4.42;
+  caption.y = tileDim * 4.58;
 
-  container.addChild(graphics);
   container.addChild(sign);
   container.addChild(caption);
   container.hitArea = new PIXI.Rectangle(0, 0, width, height);

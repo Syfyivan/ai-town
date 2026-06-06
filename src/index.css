@@ -124,6 +124,27 @@ body {
   z-index: 10;
 }
 
+.town-asset-credit {
+  background: rgba(24, 20, 37, 0.68);
+  border: 1px solid rgba(254, 199, 66, 0.36);
+  color: rgba(255, 246, 214, 0.78);
+  font-family: 'VCR OSD Mono', monospace;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0.35rem 0.45rem;
+  pointer-events: auto;
+  position: fixed;
+  right: 0.45rem;
+  text-decoration: none;
+  top: 0.45rem;
+  z-index: 20;
+}
+
+.town-asset-credit:hover {
+  background: rgba(24, 20, 37, 0.88);
+  color: #fff6d6;
+}
+
 .game-frame {
   border-width: 36px;
   border-image-source: url(../assets/ui/frame.svg);
