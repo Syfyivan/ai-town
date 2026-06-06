@@ -8,6 +8,7 @@ import { toastOnError } from '../toasts';
 import { useSendInput } from '../hooks/sendInput';
 import { GameId } from '../../convex/aiTown/ids';
 import { ServerGame } from '../hooks/serverGame';
+import { useSessionIdentity } from '../hooks/useSessionIdentity';
 
 export default function PlayerDetails({
   worldId,
@@ -24,7 +25,11 @@ export default function PlayerDetails({
   setSelectedElement: SelectElement;
   scrollViewRef: React.RefObject<HTMLDivElement>;
 }) {
-  const humanTokenIdentifier = useQuery(api.world.userStatus, { worldId });
+  const identity = useSessionIdentity();
+  const humanTokenIdentifier = useQuery(api.world.userStatus, {
+    worldId,
+    sessionId: identity.sessionId,
+  });
 
   const players = [...game.world.players.values()];
   const humanPlayer = players.find((p) => p.human === humanTokenIdentifier);

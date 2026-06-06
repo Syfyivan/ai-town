@@ -19,6 +19,8 @@ export const NPC_IDENTITY_MAX_LENGTH = 500;
 export const NPC_PLAN_MAX_LENGTH = 220;
 export const ART_STUDIO_SHIFT_DURATION_MS = 60_000;
 export const GARDEN_PLOT_COUNT = 4;
+export const PLAYER_NAME_MAX_LENGTH = 16;
+export const PLAYER_SESSION_MAX_LENGTH = 80;
 
 export type StudioFocus = 'sketch' | 'color' | 'detail';
 export type GardenCropId = 'radish' | 'greens' | 'carrot';
@@ -151,6 +153,34 @@ const GARDEN_CROP_CONFIG: Record<
     skillGain: 0.7,
   },
 };
+
+export function sanitizePlayerName(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return DEFAULT_NAME;
+  }
+  return trimmed.slice(0, PLAYER_NAME_MAX_LENGTH);
+}
+
+export function buildSessionToken(sessionId: string) {
+  const trimmed = sessionId.trim();
+  if (!trimmed) {
+    throw new Error('Missing player session.');
+  }
+  const safeSessionId = trimmed.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, PLAYER_SESSION_MAX_LENGTH);
+  if (!safeSessionId) {
+    throw new Error('Invalid player session.');
+  }
+  return `local:${safeSessionId}`;
+}
+
+export function selectSessionCharacter(sessionId: string) {
+  let hash = 0;
+  for (let i = 0; i < sessionId.length; i += 1) {
+    hash = (hash * 31 + sessionId.charCodeAt(i)) >>> 0;
+  }
+  return characters[hash % characters.length].name;
+}
 
 export type NpcProfileInput = {
   name: string;
@@ -508,20 +538,26 @@ export const restartDeadWorlds = internalMutation({
 export const userStatus = query({
   args: {
     worldId: v.id('worlds'),
+    sessionId: v.optional(v.string()),
   },
-  handler: () => {
+  handler: (_ctx, args) => {
     // const identity = await ctx.auth.getUserIdentity();
     // if (!identity) {
     //   return null;
     // }
     // return identity.tokenIdentifier;
-    return DEFAULT_NAME;
+    if (!args.sessionId) {
+      return null;
+    }
+    return buildSessionToken(args.sessionId);
   },
 });
 
 export const joinWorld = mutation({
   args: {
     worldId: v.id('worlds'),
+    sessionId: v.string(),
+    name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // const identity = await ctx.auth.getUserIdentity();
@@ -530,7 +566,8 @@ export const joinWorld = mutation({
     // }
     // const name =
     //   identity.givenName || identity.nickname || (identity.email && identity.email.split('@')[0]);
-    const name = DEFAULT_NAME;
+    const tokenIdentifier = buildSessionToken(args.sessionId);
+    const name = sanitizePlayerName(args.name ?? DEFAULT_NAME);
 
     // if (!name) {
     //   throw new ConvexError(`Missing name on ${JSON.stringify(identity)}`);
@@ -542,10 +579,10 @@ export const joinWorld = mutation({
     // const { tokenIdentifier } = identity;
     return await insertInput(ctx, world._id, 'join', {
       name,
-      character: characters[Math.floor(Math.random() * characters.length)].name,
-      description: `${DEFAULT_NAME} is a human player`,
+      character: selectSessionCharacter(args.sessionId),
+      description: `${name} 是一名真人玩家，会在溪山镇、画室和小菜园里操作自己的角色。`,
       // description: `${identity.givenName} is a human player`,
-      tokenIdentifier: DEFAULT_NAME,
+      tokenIdentifier,
     });
   },
 });
@@ -553,6 +590,7 @@ export const joinWorld = mutation({
 export const leaveWorld = mutation({
   args: {
     worldId: v.id('worlds'),
+    sessionId: v.string(),
   },
   handler: async (ctx, args) => {
     // const identity = await ctx.auth.getUserIdentity();
@@ -565,7 +603,8 @@ export const leaveWorld = mutation({
       throw new Error(`Invalid world ID: ${args.worldId}`);
     }
     // const existingPlayer = world.players.find((p) => p.human === tokenIdentifier);
-    const existingPlayer = world.players.find((p) => p.human === DEFAULT_NAME);
+    const tokenIdentifier = buildSessionToken(args.sessionId);
+    const existingPlayer = world.players.find((p) => p.human === tokenIdentifier);
     if (!existingPlayer) {
       return;
     }

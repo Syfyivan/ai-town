@@ -4,6 +4,8 @@ import {
   NPC_IDENTITY_MAX_LENGTH,
   NPC_NAME_MAX_LENGTH,
   NPC_PLAN_MAX_LENGTH,
+  PLAYER_NAME_MAX_LENGTH,
+  buildSessionToken,
   createArtStudioShift,
   createGardenPlots,
   getGardenPlotPhase,
@@ -12,6 +14,8 @@ import {
   plantGardenPlot,
   previewArtStudioJobs,
   sanitizeNpcProfile,
+  sanitizePlayerName,
+  selectSessionCharacter,
   settleArtStudioShift,
   waterGardenPlot,
 } from './world';
@@ -80,6 +84,28 @@ describe('sanitizeNpcProfile', () => {
         plan: 'x'.repeat(NPC_PLAN_MAX_LENGTH + 1),
       }),
     ).toThrow(`NPC goal cannot exceed ${NPC_PLAN_MAX_LENGTH} characters`);
+  });
+});
+
+describe('session player identity helpers', () => {
+  test('builds a stable token from a browser session id', () => {
+    expect(buildSessionToken(' abc-123_你好 ')).toBe('local:abc-123_');
+  });
+
+  test('rejects an unusable session id', () => {
+    expect(() => buildSessionToken('  !!!  ')).toThrow('Invalid player session.');
+  });
+
+  test('sanitizes player display names', () => {
+    expect(sanitizePlayerName('  阿澈  ')).toBe('阿澈');
+    expect(sanitizePlayerName('')).toBe('访客');
+    expect(sanitizePlayerName('x'.repeat(PLAYER_NAME_MAX_LENGTH + 4))).toHaveLength(
+      PLAYER_NAME_MAX_LENGTH,
+    );
+  });
+
+  test('selects a deterministic character per session', () => {
+    expect(selectSessionCharacter('friend-a')).toBe(selectSessionCharacter('friend-a'));
   });
 });
 

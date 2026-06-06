@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { api } from '../../convex/_generated/api';
 import { useServerGame } from '../hooks/serverGame';
+import { useSessionIdentity } from '../hooks/useSessionIdentity';
 
 type StudioFocus = 'sketch' | 'color' | 'detail';
 
@@ -23,12 +24,13 @@ export default function ArtStudioOverlay(props: { open: boolean; onClose: () => 
   const [focus, setFocus] = useState<StudioFocus>('sketch');
   const [submitting, setSubmitting] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const identity = useSessionIdentity();
   const worldStatus = useQuery(api.world.defaultWorldStatus);
   const worldId = worldStatus?.worldId;
   const game = useServerGame(props.open ? worldId : undefined);
   const humanTokenIdentifier = useQuery(
     api.world.userStatus,
-    props.open && worldId ? { worldId } : 'skip',
+    props.open && worldId ? { worldId, sessionId: identity.sessionId } : 'skip',
   );
   const humanPlayerId = useMemo(
     () =>

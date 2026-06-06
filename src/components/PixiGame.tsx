@@ -17,6 +17,7 @@ import { ServerGame } from '../hooks/serverGame.ts';
 import { CinemaHotspot } from './CinemaHotspot.tsx';
 import { ArtStudioHotspot } from './ArtStudioHotspot.tsx';
 import { GardenHotspot } from './GardenHotspot.tsx';
+import { useSessionIdentity } from '../hooks/useSessionIdentity.ts';
 
 export const PixiGame = (props: {
   worldId: Id<'worlds'>;
@@ -33,8 +34,13 @@ export const PixiGame = (props: {
   // PIXI setup.
   const pixiApp = useApp();
   const viewportRef = useRef<Viewport | undefined>();
+  const identity = useSessionIdentity();
 
-  const humanTokenIdentifier = useQuery(api.world.userStatus, { worldId: props.worldId }) ?? null;
+  const humanTokenIdentifier =
+    useQuery(api.world.userStatus, {
+      worldId: props.worldId,
+      sessionId: identity.sessionId,
+    }) ?? null;
   const humanPlayerId = [...props.game.world.players.values()].find(
     (p) => p.human === humanTokenIdentifier,
   )?.id;
