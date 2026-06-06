@@ -14,10 +14,11 @@ import { DebugPath } from './DebugPath.tsx';
 import { PositionIndicator } from './PositionIndicator.tsx';
 import { SHOW_DEBUG_UI } from './Game.tsx';
 import { ServerGame } from '../hooks/serverGame.ts';
-import { CinemaHotspot } from './CinemaHotspot.tsx';
-import { ArtStudioHotspot } from './ArtStudioHotspot.tsx';
-import { GardenHotspot } from './GardenHotspot.tsx';
+import { CINEMA_REGION, CinemaHotspot } from './CinemaHotspot.tsx';
+import { ART_STUDIO_REGION, ArtStudioHotspot } from './ArtStudioHotspot.tsx';
+import { GARDEN_REGION, GardenHotspot } from './GardenHotspot.tsx';
 import { useSessionIdentity } from '../hooks/useSessionIdentity.ts';
+import { Point } from '../../convex/util/types.ts';
 
 export const PixiGame = (props: {
   worldId: Id<'worlds'>;
@@ -46,6 +47,7 @@ export const PixiGame = (props: {
   )?.id;
 
   const moveTo = useSendInput(props.engineId, 'moveTo');
+  const lastKeyboardMoveAt = useRef(0);
 
   // Interaction for clicking on the world to navigate.
   const dragStart = useRef<{ screenX: number; screenY: number } | null>(null);
@@ -94,6 +96,122 @@ export const PixiGame = (props: {
   const { width, height, tileDim } = props.game.worldMap;
   const players = [...props.game.world.players.values()];
 
+  useEffect(() => {
+    const isTextInput = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+      return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
+    };
+
+    const nearRegion = (
+      position: Point,
+      region: { x: number; y: number; width: number; height: number },
+    ) =>
+      position.x >= region.x - 1.5 &&
+      position.x <= region.x + region.width + 1.5 &&
+      position.y >= region.y - 1.5 &&
+      position.y <= region.y + region.height + 1.5;
+
+    const selectNearestResident = (position: Point) => {
+      let nearest:
+        | {
+            id: typeof humanPlayerId;
+            distanceSq: number;
+          }
+        | undefined;
+      for (const player of props.game.world.players.values()) {
+        if (player.id === humanPlayerId) {
+          continue;
+        }
+        const dx = player.position.x - position.x;
+        const dy = player.position.y - position.y;
+        const distanceSq = dx * dx + dy * dy;
+        if (distanceSq > 9) {
+          continue;
+        }
+        if (!nearest || distanceSq < nearest.distanceSq) {
+          nearest = { id: player.id, distanceSq };
+        }
+      }
+      if (nearest?.id) {
+        props.setSelectedElement({ kind: 'player', id: nearest.id });
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!humanPlayerId || isTextInput(event.target)) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      const humanPlayer = props.game.world.players.get(humanPlayerId);
+      if (!humanPlayer) {
+        return;
+      }
+      const movement: Record<string, Point> = {
+        w: { x: 0, y: -1 },
+        arrowup: { x: 0, y: -1 },
+        a: { x: -1, y: 0 },
+        arrowleft: { x: -1, y: 0 },
+        s: { x: 0, y: 1 },
+        arrowdown: { x: 0, y: 1 },
+        d: { x: 1, y: 0 },
+        arrowright: { x: 1, y: 0 },
+      };
+
+      if (movement[key]) {
+        event.preventDefault();
+        const now = Date.now();
+        if (now - lastKeyboardMoveAt.current < 140) {
+          return;
+        }
+        lastKeyboardMoveAt.current = now;
+        const destination = {
+          x: Math.floor(humanPlayer.position.x + movement[key].x),
+          y: Math.floor(humanPlayer.position.y + movement[key].y),
+        };
+        setLastDestination({ t: now, ...destination });
+        void toastOnError(moveTo({ playerId: humanPlayerId, destination }));
+        return;
+      }
+
+      if (key === 'x') {
+        event.preventDefault();
+        if (props.onOpenArtStudio && nearRegion(humanPlayer.position, ART_STUDIO_REGION)) {
+          props.onOpenArtStudio();
+          return;
+        }
+        if (props.onOpenGarden && nearRegion(humanPlayer.position, GARDEN_REGION)) {
+          props.onOpenGarden();
+          return;
+        }
+        if (props.onOpenCinema && nearRegion(humanPlayer.position, CINEMA_REGION)) {
+          props.onOpenCinema();
+          return;
+        }
+        selectNearestResident(humanPlayer.position);
+        return;
+      }
+
+      if (key === 'z') {
+        event.preventDefault();
+        props.setSelectedElement(undefined);
+        void toastOnError(moveTo({ playerId: humanPlayerId, destination: null }));
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [
+    humanPlayerId,
+    moveTo,
+    props.game.world.players,
+    props.onOpenArtStudio,
+    props.onOpenCinema,
+    props.onOpenGarden,
+    props.setSelectedElement,
+  ]);
+
   // Zoom on the user’s avatar when it is created
   useEffect(() => {
     if (!viewportRef.current || humanPlayerId === undefined) return;
@@ -119,15 +237,11 @@ export const PixiGame = (props: {
         onpointerup={onMapPointerUp}
         onpointerdown={onMapPointerDown}
       />
-      {props.onOpenCinema && (
-        <CinemaHotspot tileDim={tileDim} onOpenCinema={props.onOpenCinema} />
-      )}
+      {props.onOpenCinema && <CinemaHotspot tileDim={tileDim} onOpenCinema={props.onOpenCinema} />}
       {props.onOpenArtStudio && (
         <ArtStudioHotspot tileDim={tileDim} onOpenArtStudio={props.onOpenArtStudio} />
       )}
-      {props.onOpenGarden && (
-        <GardenHotspot tileDim={tileDim} onOpenGarden={props.onOpenGarden} />
-      )}
+      {props.onOpenGarden && <GardenHotspot tileDim={tileDim} onOpenGarden={props.onOpenGarden} />}
       {players.map(
         (p) =>
           // Only show the path for the human player in non-debug mode.

@@ -22,6 +22,9 @@ import TownObservatory from './components/TownObservatory.tsx';
 import NpcManagerModal from './components/NpcManagerModal.tsx';
 import ArtStudioOverlay from './components/ArtStudioOverlay.tsx';
 import GardenOverlay from './components/GardenOverlay.tsx';
+import { useResidentPresence } from './hooks/useResidentPresence.ts';
+
+type TownScene = 'town' | 'studio' | 'garden';
 
 export default function Home() {
   const [helpModalOpen, setHelpModalOpen] = useState(false);
@@ -30,14 +33,13 @@ export default function Home() {
   );
   const [observatoryOpen, setObservatoryOpen] = useState(false);
   const [npcManagerOpen, setNpcManagerOpen] = useState(false);
-  const [artStudioOpen, setArtStudioOpen] = useState(false);
-  const [gardenOpen, setGardenOpen] = useState(false);
+  const [scene, setScene] = useState<TownScene>('town');
+  const { isResident } = useResidentPresence();
+  const townIsImmersive = scene === 'town' && isResident;
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-between font-body game-background">
-      <PoweredByConvex />
+      {!townIsImmersive && scene === 'town' && <PoweredByConvex />}
       <CinemaOverlay open={cinemaOpen} onClose={() => setCinemaOpen(false)} />
-      <ArtStudioOverlay open={artStudioOpen} onClose={() => setArtStudioOpen(false)} />
-      <GardenOverlay open={gardenOpen} onClose={() => setGardenOpen(false)} />
       <TownObservatory open={observatoryOpen} onClose={() => setObservatoryOpen(false)} />
       <NpcManagerModal open={npcManagerOpen} onClose={() => setNpcManagerOpen(false)} />
 
@@ -50,13 +52,23 @@ export default function Home() {
       >
         <div className="font-body">
           <h1 className="text-center text-6xl font-bold font-display game-title">帮助</h1>
-          <p>欢迎来到溪山镇。你可以作为居民住进小镇，移动、聊天、打工、种菜，也能顺手观察 AI 镇民的日常。</p>
+          <p>
+            欢迎来到溪山镇。你可以作为居民住进小镇，移动、聊天、打工、种菜，也能顺手观察 AI
+            镇民的日常。
+          </p>
           <h2 className="text-4xl mt-4">生活</h2>
-          <p>点击互动按钮后，你会以自己的居民身份进入地图。右侧默认显示你的钱包、背包、能力和当前进度。</p>
+          <p>
+            点击互动按钮后，你会以自己的居民身份进入地图。居民模式会放大小镇地图，角色详情会在需要时浮出。
+          </p>
           <h2 className="text-4xl mt-4">镇民</h2>
           <p>拖拽地图可以移动视角，滚轮可以缩放。点击任意角色，可以查看他的介绍和最近对话。</p>
           <p className="text-2xl mt-2">操作</p>
           <p className="mt-4">点击地图可以移动你的角色。</p>
+          <p className="mt-4">
+            也可以用 WASD 或方向键移动；靠近画室、菜园、影院时按 X 进入，按 Z 停止移动或取消查看。
+            进入画室后，WASD 移动到工作站，X 开工或领取工资，Z 返回小镇。进入菜园后，WASD
+            在田里移动，X 播种、浇水或收获，Z 切换种子。
+          </p>
           <p className="mt-4">
             想和某个角色聊天时，先点击角色，再点击“开始对话”。对方会走向你，距离足够近时对话会自动开始。
             你可以随时离开对话；智能体也可能主动邀请你聊天。
@@ -76,62 +88,72 @@ export default function Home() {
         </Unauthenticated>
       </div> */}
 
-      <div className="w-full lg:h-screen min-h-screen relative isolate overflow-hidden lg:p-8 shadow-2xl flex flex-col justify-start">
-        <h1 className="mx-auto text-4xl p-3 sm:text-8xl lg:text-9xl font-bold font-display leading-none tracking-wide game-title w-full text-left sm:text-center sm:w-auto">
-          溪山镇
-        </h1>
+      <div className={`town-app-shell ${townIsImmersive ? 'town-app-shell-resident' : ''}`}>
+        {scene === 'town' && !townIsImmersive && (
+          <>
+            <h1 className="mx-auto text-4xl p-3 sm:text-8xl lg:text-9xl font-bold font-display leading-none tracking-wide game-title w-full text-left sm:text-center sm:w-auto">
+              溪山镇
+            </h1>
 
-        <div className="max-w-xs md:max-w-xl lg:max-w-none mx-auto my-4 text-center text-base sm:text-xl md:text-2xl text-white leading-tight shadow-solid">
-          一个中文 AI 小镇，角色会闲逛、聊天、记住彼此的故事。
-          {/* <Unauthenticated>
+            <div className="max-w-xs md:max-w-xl lg:max-w-none mx-auto my-4 text-center text-base sm:text-xl md:text-2xl text-white leading-tight shadow-solid">
+              一个中文 AI 小镇，角色会闲逛、聊天、记住彼此的故事。
+              {/* <Unauthenticated>
             <div className="my-1.5 sm:my-0" />
             Log in to join the town
             <br className="block sm:hidden" /> and the conversation!
           </Unauthenticated> */}
-        </div>
+            </div>
+          </>
+        )}
 
-        {!cinemaOpen && (
+        {scene === 'town' && !cinemaOpen && (
           <Game
+            immersive={townIsImmersive}
             onOpenCinema={() => setCinemaOpen(true)}
-            onOpenArtStudio={() => setArtStudioOpen(true)}
-            onOpenGarden={() => setGardenOpen(true)}
+            onOpenArtStudio={() => setScene('studio')}
+            onOpenGarden={() => setScene('garden')}
           />
         )}
 
-        <footer className="justify-end bottom-0 left-0 w-full flex items-center mt-4 gap-3 p-6 flex-wrap pointer-events-none">
-          <div className="flex gap-4 flex-grow pointer-events-none">
-            <FreezeButton />
-            <MusicButton />
-            <Button href="https://github.com/a16z-infra/ai-town" imgUrl={starImg}>
-              上游
-            </Button>
-            <Button imgUrl={cinemaImg} onClick={() => setCinemaOpen(true)}>
-              影院
-            </Button>
-            <Button imgUrl={starImg} onClick={() => setArtStudioOpen(true)}>
-              画室
-            </Button>
-            <Button imgUrl={starImg} onClick={() => setGardenOpen(true)}>
-              菜园
-            </Button>
-            <Button imgUrl={starImg} onClick={() => setObservatoryOpen(true)}>
-              镇志
-            </Button>
-            <Button imgUrl={starImg} onClick={() => setNpcManagerOpen(true)}>
-              NPC
-            </Button>
-            <InteractButton />
-            <Button imgUrl={helpImg} onClick={() => setHelpModalOpen(true)}>
-              帮助
-            </Button>
-          </div>
-          <a href="https://a16z.com">
-            <img className="w-8 h-8 pointer-events-auto" src={a16zImg} alt="a16z" />
-          </a>
-          <a href="https://convex.dev/c/ai-town">
-            <img className="w-20 h-8 pointer-events-auto" src={convexImg} alt="Convex" />
-          </a>
-        </footer>
+        {scene === 'studio' && <ArtStudioOverlay open onClose={() => setScene('town')} />}
+        {scene === 'garden' && <GardenOverlay open onClose={() => setScene('town')} />}
+
+        {scene === 'town' && (
+          <footer className={`town-footer ${townIsImmersive ? 'town-footer-resident' : ''}`}>
+            <div className="flex gap-4 flex-grow pointer-events-none">
+              <FreezeButton />
+              <MusicButton />
+              <Button href="https://github.com/a16z-infra/ai-town" imgUrl={starImg}>
+                上游
+              </Button>
+              <Button imgUrl={cinemaImg} onClick={() => setCinemaOpen(true)}>
+                影院
+              </Button>
+              <Button imgUrl={starImg} onClick={() => setScene('studio')}>
+                画室
+              </Button>
+              <Button imgUrl={starImg} onClick={() => setScene('garden')}>
+                菜园
+              </Button>
+              <Button imgUrl={starImg} onClick={() => setObservatoryOpen(true)}>
+                镇志
+              </Button>
+              <Button imgUrl={starImg} onClick={() => setNpcManagerOpen(true)}>
+                NPC
+              </Button>
+              <InteractButton />
+              <Button imgUrl={helpImg} onClick={() => setHelpModalOpen(true)}>
+                帮助
+              </Button>
+            </div>
+            <a href="https://a16z.com">
+              <img className="w-8 h-8 pointer-events-auto" src={a16zImg} alt="a16z" />
+            </a>
+            <a href="https://convex.dev/c/ai-town">
+              <img className="w-20 h-8 pointer-events-auto" src={convexImg} alt="Convex" />
+            </a>
+          </footer>
+        )}
         <ToastContainer position="bottom-right" autoClose={2000} closeOnClick theme="dark" />
       </div>
     </main>

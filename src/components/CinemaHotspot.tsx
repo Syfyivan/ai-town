@@ -10,10 +10,12 @@ type CinemaHotspotContainer = PIXI.Container & {
   openCinema?: () => void;
 };
 
-const CINEMA_TILE_X = 33;
-const CINEMA_TILE_Y = 16;
-const CINEMA_WIDTH_TILES = 8;
-const CINEMA_HEIGHT_TILES = 5;
+export const CINEMA_REGION = {
+  x: 33,
+  y: 16,
+  width: 8,
+  height: 5,
+};
 
 function drawPixelRect(
   graphics: PIXI.Graphics,
@@ -29,16 +31,37 @@ function drawPixelRect(
 }
 
 function buildCinemaSprite(tileDim: number) {
-  const width = CINEMA_WIDTH_TILES * tileDim;
-  const height = CINEMA_HEIGHT_TILES * tileDim;
+  const width = CINEMA_REGION.width * tileDim;
+  const height = CINEMA_REGION.height * tileDim;
   const container = new PIXI.Container() as CinemaHotspotContainer;
   const graphics = new PIXI.Graphics();
 
   graphics.lineStyle(4, 0x181425, 1);
   drawPixelRect(graphics, 0x181425, 0, tileDim, width, height - tileDim);
-  drawPixelRect(graphics, 0x3f2832, tileDim / 2, tileDim * 1.3, width - tileDim, height - tileDim * 1.5);
-  drawPixelRect(graphics, 0x743f39, tileDim, tileDim * 1.65, width - tileDim * 2, height - tileDim * 2.2);
-  drawPixelRect(graphics, 0x0f1020, tileDim * 1.4, tileDim * 2, width - tileDim * 2.8, tileDim * 1.65);
+  drawPixelRect(
+    graphics,
+    0x3f2832,
+    tileDim / 2,
+    tileDim * 1.3,
+    width - tileDim,
+    height - tileDim * 1.5,
+  );
+  drawPixelRect(
+    graphics,
+    0x743f39,
+    tileDim,
+    tileDim * 1.65,
+    width - tileDim * 2,
+    height - tileDim * 2.2,
+  );
+  drawPixelRect(
+    graphics,
+    0x0f1020,
+    tileDim * 1.4,
+    tileDim * 2,
+    width - tileDim * 2.8,
+    tileDim * 1.65,
+  );
 
   graphics.lineStyle(3, 0xfec742, 0.95);
   graphics.beginFill(0x2a1b2d);
@@ -48,7 +71,14 @@ function buildCinemaSprite(tileDim: number) {
   graphics.lineStyle(0);
   for (let i = 0; i < 9; i += 1) {
     const x = tileDim * 1.8 + i * tileDim * 0.55;
-    drawPixelRect(graphics, i % 2 === 0 ? 0xfec742 : 0x5acde8, x, tileDim * 2.4, tileDim * 0.26, tileDim * 0.42);
+    drawPixelRect(
+      graphics,
+      i % 2 === 0 ? 0xfec742 : 0x5acde8,
+      x,
+      tileDim * 2.4,
+      tileDim * 0.26,
+      tileDim * 0.42,
+    );
   }
 
   graphics.beginFill(0x6e2146);
@@ -111,8 +141,8 @@ function buildCinemaSprite(tileDim: number) {
 export const CinemaHotspot = PixiComponent('CinemaHotspot', {
   create: (props: CinemaHotspotProps) => {
     const container = buildCinemaSprite(props.tileDim);
-    container.x = CINEMA_TILE_X * props.tileDim;
-    container.y = CINEMA_TILE_Y * props.tileDim;
+    container.x = CINEMA_REGION.x * props.tileDim;
+    container.y = CINEMA_REGION.y * props.tileDim;
     container.openCinema = props.onOpenCinema;
     container.on('pointerdown', (event: PIXI.FederatedPointerEvent) => {
       event.stopPropagation();
@@ -127,11 +157,15 @@ export const CinemaHotspot = PixiComponent('CinemaHotspot', {
     return container;
   },
 
-  applyProps: (instance: CinemaHotspotContainer, oldProps: CinemaHotspotProps, newProps: CinemaHotspotProps) => {
+  applyProps: (
+    instance: CinemaHotspotContainer,
+    oldProps: CinemaHotspotProps,
+    newProps: CinemaHotspotProps,
+  ) => {
     instance.openCinema = newProps.onOpenCinema;
     if (oldProps.tileDim !== newProps.tileDim) {
-      instance.x = CINEMA_TILE_X * newProps.tileDim;
-      instance.y = CINEMA_TILE_Y * newProps.tileDim;
+      instance.x = CINEMA_REGION.x * newProps.tileDim;
+      instance.y = CINEMA_REGION.y * newProps.tileDim;
     }
     applyDefaultProps(instance, oldProps, newProps);
   },

@@ -10,10 +10,12 @@ type ArtStudioHotspotContainer = PIXI.Container & {
   openArtStudio?: () => void;
 };
 
-const ART_STUDIO_TILE_X = 12;
-const ART_STUDIO_TILE_Y = 28;
-const ART_STUDIO_WIDTH_TILES = 8;
-const ART_STUDIO_HEIGHT_TILES = 5;
+export const ART_STUDIO_REGION = {
+  x: 12,
+  y: 28,
+  width: 8,
+  height: 5,
+};
 
 function drawPixelRect(
   graphics: PIXI.Graphics,
@@ -29,15 +31,29 @@ function drawPixelRect(
 }
 
 function buildArtStudioSprite(tileDim: number) {
-  const width = ART_STUDIO_WIDTH_TILES * tileDim;
-  const height = ART_STUDIO_HEIGHT_TILES * tileDim;
+  const width = ART_STUDIO_REGION.width * tileDim;
+  const height = ART_STUDIO_REGION.height * tileDim;
   const container = new PIXI.Container() as ArtStudioHotspotContainer;
   const graphics = new PIXI.Graphics();
 
   graphics.lineStyle(4, 0x181425, 1);
   drawPixelRect(graphics, 0x181425, 0, tileDim * 1.1, width, height - tileDim * 1.1);
-  drawPixelRect(graphics, 0xecd8a7, tileDim * 0.45, tileDim * 1.45, width - tileDim * 0.9, height - tileDim * 1.9);
-  drawPixelRect(graphics, 0xb86f50, tileDim, tileDim * 1.85, width - tileDim * 2, height - tileDim * 2.45);
+  drawPixelRect(
+    graphics,
+    0xecd8a7,
+    tileDim * 0.45,
+    tileDim * 1.45,
+    width - tileDim * 0.9,
+    height - tileDim * 1.9,
+  );
+  drawPixelRect(
+    graphics,
+    0xb86f50,
+    tileDim,
+    tileDim * 1.85,
+    width - tileDim * 2,
+    height - tileDim * 2.45,
+  );
 
   graphics.beginFill(0x6e2146);
   graphics.drawPolygon([
@@ -114,8 +130,8 @@ function buildArtStudioSprite(tileDim: number) {
 export const ArtStudioHotspot = PixiComponent('ArtStudioHotspot', {
   create: (props: ArtStudioHotspotProps) => {
     const container = buildArtStudioSprite(props.tileDim);
-    container.x = ART_STUDIO_TILE_X * props.tileDim;
-    container.y = ART_STUDIO_TILE_Y * props.tileDim;
+    container.x = ART_STUDIO_REGION.x * props.tileDim;
+    container.y = ART_STUDIO_REGION.y * props.tileDim;
     container.openArtStudio = props.onOpenArtStudio;
     container.on('pointerdown', (event: PIXI.FederatedPointerEvent) => {
       event.stopPropagation();
@@ -137,8 +153,8 @@ export const ArtStudioHotspot = PixiComponent('ArtStudioHotspot', {
   ) => {
     instance.openArtStudio = newProps.onOpenArtStudio;
     if (oldProps.tileDim !== newProps.tileDim) {
-      instance.x = ART_STUDIO_TILE_X * newProps.tileDim;
-      instance.y = ART_STUDIO_TILE_Y * newProps.tileDim;
+      instance.x = ART_STUDIO_REGION.x * newProps.tileDim;
+      instance.y = ART_STUDIO_REGION.y * newProps.tileDim;
     }
     applyDefaultProps(instance, oldProps, newProps);
   },
