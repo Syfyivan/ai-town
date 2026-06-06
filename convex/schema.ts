@@ -110,6 +110,56 @@ export default defineSchema({
     .index('worldId', ['worldId'])
     .index('worldPlayer', ['worldId', 'playerId']),
 
+  careerProfiles: defineTable({
+    worldId: v.id('worlds'),
+    playerId,
+    residentName: v.string(),
+    experience: v.object({
+      blacksmith: v.number(),
+      carpenter: v.number(),
+      farmer: v.number(),
+      fisher: v.number(),
+      artist: v.number(),
+      mage: v.number(),
+      rancher: v.number(),
+      tavernKeeper: v.number(),
+      seedSeller: v.number(),
+      mayor: v.number(),
+      scientist: v.number(),
+      doctor: v.number(),
+    }),
+    totalJobs: v.number(),
+    totalCoinsEarned: v.number(),
+    lastWorkedAt: v.optional(v.number()),
+    activeJob: v.optional(
+      v.object({
+        profession: v.union(
+          v.literal('blacksmith'),
+          v.literal('carpenter'),
+          v.literal('farmer'),
+          v.literal('fisher'),
+          v.literal('artist'),
+          v.literal('mage'),
+          v.literal('rancher'),
+          v.literal('tavernKeeper'),
+          v.literal('seedSeller'),
+          v.literal('mayor'),
+          v.literal('scientist'),
+          v.literal('doctor'),
+        ),
+        title: v.string(),
+        npcName: v.string(),
+        workplace: v.string(),
+        startedAt: v.number(),
+        endsAt: v.number(),
+        payCoins: v.number(),
+        xpGain: v.number(),
+      }),
+    ),
+  })
+    .index('worldId', ['worldId'])
+    .index('worldPlayer', ['worldId', 'playerId']),
+
   residentProfiles: defineTable({
     worldId: v.id('worlds'),
     tokenIdentifier: v.string(),

@@ -35,10 +35,26 @@ export const MARKET_SEED_BUNDLE_COST = 10;
 export const MARKET_VEGETABLE_SELL_PRICE = 6;
 export const SEED_SAVE_SUCCESS_RATE = 0.4;
 export const SEED_REPLICATOR_SUCCESS_RATE = 0.95;
+export const CAREER_SHIFT_DURATION_MS = 45_000;
+export const CAREER_ENERGY_COST = 10;
+export const CAREER_SHOP_UNLOCK_XP = 100;
 
 export type StudioFocus = 'sketch' | 'color' | 'detail';
 export type GardenCropId = 'radish' | 'greens' | 'carrot';
 export type SeedInventory = Record<GardenCropId, number>;
+export type ProfessionId =
+  | 'blacksmith'
+  | 'carpenter'
+  | 'farmer'
+  | 'fisher'
+  | 'artist'
+  | 'mage'
+  | 'rancher'
+  | 'tavernKeeper'
+  | 'seedSeller'
+  | 'mayor'
+  | 'scientist'
+  | 'doctor';
 
 export type StudioWorkerStats = {
   florins: number;
@@ -82,10 +98,37 @@ export type GardenerLifeStats = {
   seedReplicator: boolean;
 };
 
+export type ProfessionExperience = Record<ProfessionId, number>;
+
+export type CareerShift = {
+  profession: ProfessionId;
+  title: string;
+  npcName: string;
+  workplace: string;
+  startedAt: number;
+  endsAt: number;
+  payCoins: number;
+  xpGain: number;
+};
+
 export type GardenPlotPhase = 'empty' | 'planted' | 'watered' | 'ready';
 
 const studioFocus = v.union(v.literal('sketch'), v.literal('color'), v.literal('detail'));
 const gardenCrop = v.union(v.literal('radish'), v.literal('greens'), v.literal('carrot'));
+const profession = v.union(
+  v.literal('blacksmith'),
+  v.literal('carpenter'),
+  v.literal('farmer'),
+  v.literal('fisher'),
+  v.literal('artist'),
+  v.literal('mage'),
+  v.literal('rancher'),
+  v.literal('tavernKeeper'),
+  v.literal('seedSeller'),
+  v.literal('mayor'),
+  v.literal('scientist'),
+  v.literal('doctor'),
+);
 
 const GARDEN_STARTER_SEEDS: SeedInventory = {
   radish: 4,
@@ -150,6 +193,143 @@ const INITIAL_GARDENER_STATS: GardenerStats = {
   vegetables: 0,
   gardeningSkill: 1,
   harvestsCompleted: 0,
+};
+
+const INITIAL_PROFESSION_EXPERIENCE: ProfessionExperience = {
+  blacksmith: 0,
+  carpenter: 0,
+  farmer: 0,
+  fisher: 0,
+  artist: 0,
+  mage: 0,
+  rancher: 0,
+  tavernKeeper: 0,
+  seedSeller: 0,
+  mayor: 0,
+  scientist: 0,
+  doctor: 0,
+};
+
+const PROFESSION_CONFIG: Record<
+  ProfessionId,
+  {
+    label: string;
+    npcName: string;
+    workplace: string;
+    jobTitle: string;
+    description: string;
+    payCoins: number;
+    xpGain: number;
+  }
+> = {
+  blacksmith: {
+    label: '铁匠',
+    npcName: '铁匠宋砧',
+    workplace: '溪山铁铺',
+    jobTitle: '整理矿石和打磨工具',
+    description: '帮铁匠分拣矿石、磨刀和修农具，适合以后做武器、工具和机械零件。',
+    payCoins: 16,
+    xpGain: 14,
+  },
+  carpenter: {
+    label: '木匠',
+    npcName: '木匠闻桐',
+    workplace: '木作坊',
+    jobTitle: '裁木板和修门窗',
+    description: '跟木匠做基础木工，以后可以做家具、扩建房屋和接建造委托。',
+    payCoins: 15,
+    xpGain: 14,
+  },
+  farmer: {
+    label: '农民',
+    npcName: '园丁沈梨',
+    workplace: '小菜园',
+    jobTitle: '翻土和照看菜畦',
+    description: '照看作物、学会育苗和轮作，是后续自营农场和作物交易的基础。',
+    payCoins: 13,
+    xpGain: 12,
+  },
+  fisher: {
+    label: '渔夫',
+    npcName: '渔夫江渚',
+    workplace: '溪边码头',
+    jobTitle: '修网和分拣鱼获',
+    description: '在溪边帮忙修网、分鱼和记潮水，之后可以自己钓鱼、养鱼和卖水产。',
+    payCoins: 14,
+    xpGain: 13,
+  },
+  artist: {
+    label: '艺术家',
+    npcName: '画室顾南星',
+    workplace: '溪山画室',
+    jobTitle: '装裱画框和递颜料',
+    description: '给画室做助手，积累审美和绘画经验，未来可以接肖像、壁画和展览。',
+    payCoins: 16,
+    xpGain: 15,
+  },
+  mage: {
+    label: '魔法师',
+    npcName: '法师岚珀',
+    workplace: '星井小塔',
+    jobTitle: '抄写符文和照看星尘',
+    description: '学习基础符文、药粉和小镇异常事件处理，后续可做魔法工具和祝福。',
+    payCoins: 17,
+    xpGain: 15,
+  },
+  rancher: {
+    label: '牧民',
+    npcName: '牧民阿禾',
+    workplace: '山坡牧棚',
+    jobTitle: '喂草料和刷洗棚舍',
+    description: '帮忙照顾动物，后续可以养牛羊、产奶产毛，也能做牧场订单。',
+    payCoins: 14,
+    xpGain: 13,
+  },
+  tavernKeeper: {
+    label: '酒吧老板',
+    npcName: '酒馆老板罗麦',
+    workplace: '溪山酒馆',
+    jobTitle: '备菜和招待客人',
+    description: '在酒馆跑堂、备菜和听消息，未来可以经营餐饮、情报和社交活动。',
+    payCoins: 18,
+    xpGain: 14,
+  },
+  seedSeller: {
+    label: '种子店老板',
+    npcName: '种子商陆青',
+    workplace: '种子店',
+    jobTitle: '清点种子和打包订单',
+    description: '学习种子库存、留种和定价，后续能经营种子、肥料和农业工具。',
+    payCoins: 15,
+    xpGain: 14,
+  },
+  mayor: {
+    label: '镇长',
+    npcName: '镇长许归',
+    workplace: '镇公所',
+    jobTitle: '整理公告和登记摊位',
+    description: '处理公告、集市摊位和居民委托，为之后治理小镇和公共事件铺路。',
+    payCoins: 16,
+    xpGain: 13,
+  },
+  scientist: {
+    label: '科学家',
+    npcName: '科学家林序',
+    workplace: '小镇实验室',
+    jobTitle: '记录样本和维护仪器',
+    description: '帮科学家做记录、样本和机器维护，后续可发明种子复制机等设备。',
+    payCoins: 18,
+    xpGain: 16,
+  },
+  doctor: {
+    label: '医生',
+    npcName: '医生白芷',
+    workplace: '诊所',
+    jobTitle: '整理药柜和护理病人',
+    description: '在诊所做基础护理和药材整理，未来可以治疗居民、制药和处理突发疾病。',
+    payCoins: 17,
+    xpGain: 15,
+  },
 };
 
 const GARDEN_CROP_CONFIG: Record<
@@ -543,6 +723,107 @@ export function previewGardenCrops() {
   }));
 }
 
+function normalizeProfessionExperience(
+  experience?: Partial<ProfessionExperience>,
+): ProfessionExperience {
+  return {
+    blacksmith: Math.max(0, Math.floor(experience?.blacksmith ?? 0)),
+    carpenter: Math.max(0, Math.floor(experience?.carpenter ?? 0)),
+    farmer: Math.max(0, Math.floor(experience?.farmer ?? 0)),
+    fisher: Math.max(0, Math.floor(experience?.fisher ?? 0)),
+    artist: Math.max(0, Math.floor(experience?.artist ?? 0)),
+    mage: Math.max(0, Math.floor(experience?.mage ?? 0)),
+    rancher: Math.max(0, Math.floor(experience?.rancher ?? 0)),
+    tavernKeeper: Math.max(0, Math.floor(experience?.tavernKeeper ?? 0)),
+    seedSeller: Math.max(0, Math.floor(experience?.seedSeller ?? 0)),
+    mayor: Math.max(0, Math.floor(experience?.mayor ?? 0)),
+    scientist: Math.max(0, Math.floor(experience?.scientist ?? 0)),
+    doctor: Math.max(0, Math.floor(experience?.doctor ?? 0)),
+  };
+}
+
+function professionLevel(experience: number) {
+  return Math.floor(experience / 50) + 1;
+}
+
+export function summarizeCareerProgress(experience?: Partial<ProfessionExperience>) {
+  const normalizedExperience = normalizeProfessionExperience(experience);
+  return (Object.keys(PROFESSION_CONFIG) as ProfessionId[]).map((professionId) => {
+    const config = PROFESSION_CONFIG[professionId];
+    const xp = normalizedExperience[professionId];
+    return {
+      profession: professionId,
+      label: config.label,
+      npcName: config.npcName,
+      workplace: config.workplace,
+      experience: xp,
+      level: professionLevel(xp),
+      xpToOpenShop: Math.max(0, CAREER_SHOP_UNLOCK_XP - xp),
+      canOpenShop: xp >= CAREER_SHOP_UNLOCK_XP,
+    };
+  });
+}
+
+export function createCareerShift(professionId: ProfessionId, now: number): CareerShift {
+  const config = PROFESSION_CONFIG[professionId];
+  return {
+    profession: professionId,
+    title: config.jobTitle,
+    npcName: config.npcName,
+    workplace: config.workplace,
+    startedAt: now,
+    endsAt: now + CAREER_SHIFT_DURATION_MS,
+    payCoins: config.payCoins,
+    xpGain: config.xpGain,
+  };
+}
+
+export function getCareerShiftProgress(
+  now: number,
+  shift: Pick<CareerShift, 'startedAt' | 'endsAt'>,
+) {
+  const duration = shift.endsAt - shift.startedAt;
+  if (duration <= 0) {
+    return 1;
+  }
+  return Math.min(1, Math.max(0, (now - shift.startedAt) / duration));
+}
+
+export function applyCareerShiftExperience(
+  experience: ProfessionExperience,
+  shift: Pick<CareerShift, 'profession' | 'xpGain'>,
+) {
+  return {
+    ...experience,
+    [shift.profession]: experience[shift.profession] + shift.xpGain,
+  };
+}
+
+export function previewCareerJobs(experience?: Partial<ProfessionExperience>) {
+  const progressByProfession = new Map(
+    summarizeCareerProgress(experience).map((entry) => [entry.profession, entry]),
+  );
+  return (Object.keys(PROFESSION_CONFIG) as ProfessionId[]).map((professionId) => {
+    const config = PROFESSION_CONFIG[professionId];
+    const progress = progressByProfession.get(professionId)!;
+    return {
+      profession: professionId,
+      label: config.label,
+      npcName: config.npcName,
+      workplace: config.workplace,
+      title: config.jobTitle,
+      description: config.description,
+      payCoins: config.payCoins,
+      xpGain: config.xpGain,
+      durationMs: CAREER_SHIFT_DURATION_MS,
+      level: progress.level,
+      experience: progress.experience,
+      xpToOpenShop: progress.xpToOpenShop,
+      canOpenShop: progress.canOpenShop,
+    };
+  });
+}
+
 export function summarizeResidentAssets(
   worker?: StudioWorkerStats,
   gardener?: GardenerStats & Partial<GardenerLifeStats>,
@@ -616,6 +897,17 @@ async function findGardener(db: DatabaseReader, worldId: Id<'worlds'>, gardenerP
   return await db
     .query('gardeners')
     .withIndex('worldPlayer', (q) => q.eq('worldId', worldId).eq('playerId', gardenerPlayerId))
+    .unique();
+}
+
+async function findCareerProfile(
+  db: DatabaseReader,
+  worldId: Id<'worlds'>,
+  careerPlayerId: string,
+) {
+  return await db
+    .query('careerProfiles')
+    .withIndex('worldPlayer', (q) => q.eq('worldId', worldId).eq('playerId', careerPlayerId))
     .unique();
 }
 
@@ -1026,8 +1318,12 @@ export const residentStatus = query({
       : undefined;
     const worker = player ? await findArtStudioWorker(ctx.db, args.worldId, player.id) : undefined;
     const gardener = player ? await findGardener(ctx.db, args.worldId, player.id) : undefined;
+    const careerProfile = player
+      ? await findCareerProfile(ctx.db, args.worldId, player.id)
+      : undefined;
     const workerStats = artStudioStatsFromWorker(worker ?? undefined);
     const gardenerStats = fullGardenerStatsFromRecord(gardener ?? undefined);
+    const careerExperience = normalizeProfessionExperience(careerProfile?.experience);
     const now = Date.now();
     const calendar = getTownCalendar(now, profile?.daysSlept ?? 0);
     const gardenPlots = ensureGardenPlots(gardener?.plots).map((plot) => ({
@@ -1088,6 +1384,21 @@ export const residentStatus = query({
               endsAt: worker.activeShift.endsAt,
             }
           : undefined,
+      },
+      career: {
+        totalJobs: careerProfile?.totalJobs ?? 0,
+        totalCoinsEarned: careerProfile?.totalCoinsEarned ?? 0,
+        shopUnlockXp: CAREER_SHOP_UNLOCK_XP,
+        energyCost: CAREER_ENERGY_COST,
+        activeJob: careerProfile?.activeJob
+          ? {
+              ...careerProfile.activeJob,
+              progress: getCareerShiftProgress(now, careerProfile.activeJob),
+              readyToFinish: now >= careerProfile.activeJob.endsAt,
+            }
+          : undefined,
+        jobs: previewCareerJobs(careerExperience),
+        progress: summarizeCareerProgress(careerExperience),
       },
       garden: {
         readyPlots,
@@ -1245,6 +1556,152 @@ export const finishArtStudioShift = mutation({
       skillGain: worker.activeShift.skillGain,
       creativityGain: worker.activeShift.creativityGain,
       reputationGain: worker.activeShift.reputationGain,
+    };
+  },
+});
+
+export const startCareerShift = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    playerId,
+    profession,
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    requireHumanPlayer(world, args.playerId);
+
+    const careerProfile = await findCareerProfile(ctx.db, world._id, args.playerId);
+    if (careerProfile?.activeJob) {
+      const progress = getCareerShiftProgress(Date.now(), careerProfile.activeJob);
+      if (progress >= 1) {
+        throw new Error('上一份临时工已经完成，请先领取工资。');
+      }
+      throw new Error('当前还有临时工正在进行。');
+    }
+
+    const now = Date.now();
+    const gardener = await findGardener(ctx.db, world._id, args.playerId);
+    const life = spendGardenEnergy(gardenLifeFromRecord(gardener ?? undefined), CAREER_ENERGY_COST);
+    const residentName = await getPlayerDisplayName(ctx.db, world._id, args.playerId);
+    const activeJob = createCareerShift(args.profession, now);
+
+    if (gardener) {
+      await ctx.db.patch(gardener._id, {
+        gardenerName: residentName,
+        energy: life.energy,
+        food: life.food,
+        seeds: life.seeds,
+        seedReplicator: life.seedReplicator,
+        lastTendedAt: now,
+      });
+    } else {
+      await ctx.db.insert('gardeners', {
+        worldId: world._id,
+        playerId: args.playerId,
+        gardenerName: residentName,
+        ...INITIAL_GARDENER_STATS,
+        energy: life.energy,
+        food: life.food,
+        seeds: life.seeds,
+        seedReplicator: life.seedReplicator,
+        plots: createGardenPlots(),
+        lastTendedAt: now,
+      });
+    }
+
+    if (careerProfile) {
+      await ctx.db.patch(careerProfile._id, {
+        residentName,
+        experience: normalizeProfessionExperience(careerProfile.experience),
+        activeJob,
+      });
+    } else {
+      await ctx.db.insert('careerProfiles', {
+        worldId: world._id,
+        playerId: args.playerId,
+        residentName,
+        experience: normalizeProfessionExperience(INITIAL_PROFESSION_EXPERIENCE),
+        totalJobs: 0,
+        totalCoinsEarned: 0,
+        activeJob,
+      });
+    }
+    return activeJob;
+  },
+});
+
+export const finishCareerShift = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    playerId,
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    requireHumanPlayer(world, args.playerId);
+
+    const careerProfile = await findCareerProfile(ctx.db, world._id, args.playerId);
+    if (!careerProfile?.activeJob) {
+      throw new Error('当前没有可以结算的临时工。');
+    }
+
+    const now = Date.now();
+    if (getCareerShiftProgress(now, careerProfile.activeJob) < 1) {
+      throw new Error('这份临时工还没有做完。');
+    }
+
+    const experience = normalizeProfessionExperience(careerProfile.experience);
+    const nextExperience = applyCareerShiftExperience(experience, careerProfile.activeJob);
+    await ctx.db.patch(careerProfile._id, {
+      experience: nextExperience,
+      totalJobs: careerProfile.totalJobs + 1,
+      totalCoinsEarned: careerProfile.totalCoinsEarned + careerProfile.activeJob.payCoins,
+      activeJob: undefined,
+      lastWorkedAt: now,
+    });
+
+    const gardener = await findGardener(ctx.db, world._id, args.playerId);
+    const residentName = await getPlayerDisplayName(ctx.db, world._id, args.playerId);
+    if (gardener) {
+      await ctx.db.patch(gardener._id, {
+        gardenerName: residentName,
+        coins: gardener.coins + careerProfile.activeJob.payCoins,
+        lastTendedAt: now,
+      });
+    } else {
+      const life = gardenLifeFromRecord(undefined);
+      await ctx.db.insert('gardeners', {
+        worldId: world._id,
+        playerId: args.playerId,
+        gardenerName: residentName,
+        ...INITIAL_GARDENER_STATS,
+        coins: careerProfile.activeJob.payCoins,
+        energy: life.energy,
+        food: life.food,
+        seeds: life.seeds,
+        seedReplicator: life.seedReplicator,
+        plots: createGardenPlots(),
+        lastTendedAt: now,
+      });
+    }
+
+    const progress = summarizeCareerProgress(nextExperience).find(
+      (entry) => entry.profession === careerProfile.activeJob!.profession,
+    )!;
+    return {
+      profession: careerProfile.activeJob.profession,
+      label: PROFESSION_CONFIG[careerProfile.activeJob.profession].label,
+      title: careerProfile.activeJob.title,
+      payCoins: careerProfile.activeJob.payCoins,
+      xpGain: careerProfile.activeJob.xpGain,
+      experience: progress.experience,
+      level: progress.level,
+      canOpenShop: progress.canOpenShop,
     };
   },
 });

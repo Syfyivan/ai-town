@@ -10,6 +10,171 @@ import { useSessionIdentity } from '../hooks/useSessionIdentity';
 import AvatarPreview from './AvatarPreview';
 
 type GardenCropId = 'radish' | 'greens' | 'carrot';
+type ProfessionId =
+  | 'blacksmith'
+  | 'carpenter'
+  | 'farmer'
+  | 'fisher'
+  | 'artist'
+  | 'mage'
+  | 'rancher'
+  | 'tavernKeeper'
+  | 'seedSeller'
+  | 'mayor'
+  | 'scientist'
+  | 'doctor';
+
+const FALLBACK_CAREER_BASE: Array<{
+  profession: ProfessionId;
+  label: string;
+  npcName: string;
+  workplace: string;
+  title: string;
+  description: string;
+  payCoins: number;
+  xpGain: number;
+}> = [
+  {
+    profession: 'blacksmith',
+    label: '铁匠',
+    npcName: '铁匠宋砧',
+    workplace: '溪山铁铺',
+    title: '整理矿石和打磨工具',
+    description: '帮铁匠分拣矿石、磨刀和修农具。',
+    payCoins: 16,
+    xpGain: 14,
+  },
+  {
+    profession: 'carpenter',
+    label: '木匠',
+    npcName: '木匠闻桐',
+    workplace: '木作坊',
+    title: '裁木板和修门窗',
+    description: '跟木匠做基础木工，之后可以做家具和扩建。',
+    payCoins: 15,
+    xpGain: 14,
+  },
+  {
+    profession: 'farmer',
+    label: '农民',
+    npcName: '园丁沈梨',
+    workplace: '小菜园',
+    title: '翻土和照看菜畦',
+    description: '照看作物、育苗和轮作，是自营农场的基础。',
+    payCoins: 13,
+    xpGain: 12,
+  },
+  {
+    profession: 'fisher',
+    label: '渔夫',
+    npcName: '渔夫江渚',
+    workplace: '溪边码头',
+    title: '修网和分拣鱼获',
+    description: '在溪边修网、分鱼和记录潮水。',
+    payCoins: 14,
+    xpGain: 13,
+  },
+  {
+    profession: 'artist',
+    label: '艺术家',
+    npcName: '画室顾南星',
+    workplace: '溪山画室',
+    title: '装裱画框和递颜料',
+    description: '给画室做助手，积累绘画和审美经验。',
+    payCoins: 16,
+    xpGain: 15,
+  },
+  {
+    profession: 'mage',
+    label: '魔法师',
+    npcName: '法师岚珀',
+    workplace: '星井小塔',
+    title: '抄写符文和照看星尘',
+    description: '学习基础符文和小镇异常事件处理。',
+    payCoins: 17,
+    xpGain: 15,
+  },
+  {
+    profession: 'rancher',
+    label: '牧民',
+    npcName: '牧民阿禾',
+    workplace: '山坡牧棚',
+    title: '喂草料和刷洗棚舍',
+    description: '照顾动物，为后续牧场经营做准备。',
+    payCoins: 14,
+    xpGain: 13,
+  },
+  {
+    profession: 'tavernKeeper',
+    label: '酒吧老板',
+    npcName: '酒馆老板罗麦',
+    workplace: '溪山酒馆',
+    title: '备菜和招待客人',
+    description: '在酒馆跑堂、备菜和听镇上消息。',
+    payCoins: 18,
+    xpGain: 14,
+  },
+  {
+    profession: 'seedSeller',
+    label: '种子店老板',
+    npcName: '种子商陆青',
+    workplace: '种子店',
+    title: '清点种子和打包订单',
+    description: '学习种子库存、留种和定价。',
+    payCoins: 15,
+    xpGain: 14,
+  },
+  {
+    profession: 'mayor',
+    label: '镇长',
+    npcName: '镇长许归',
+    workplace: '镇公所',
+    title: '整理公告和登记摊位',
+    description: '处理公告、集市摊位和居民委托。',
+    payCoins: 16,
+    xpGain: 13,
+  },
+  {
+    profession: 'scientist',
+    label: '科学家',
+    npcName: '科学家林序',
+    workplace: '小镇实验室',
+    title: '记录样本和维护仪器',
+    description: '帮科学家做样本记录和机器维护。',
+    payCoins: 18,
+    xpGain: 16,
+  },
+  {
+    profession: 'doctor',
+    label: '医生',
+    npcName: '医生白芷',
+    workplace: '诊所',
+    title: '整理药柜和护理病人',
+    description: '在诊所做基础护理和药材整理。',
+    payCoins: 17,
+    xpGain: 15,
+  },
+];
+
+const FALLBACK_CAREER_JOBS = FALLBACK_CAREER_BASE.map((job) => ({
+  ...job,
+  durationMs: 45_000,
+  level: 1,
+  experience: 0,
+  xpToOpenShop: 100,
+  canOpenShop: false,
+}));
+
+const FALLBACK_CAREER_PROGRESS = FALLBACK_CAREER_BASE.map((job) => ({
+  profession: job.profession,
+  label: job.label,
+  npcName: job.npcName,
+  workplace: job.workplace,
+  experience: 0,
+  level: 1,
+  xpToOpenShop: 100,
+  canOpenShop: false,
+}));
 
 function formatProgress(progress?: number) {
   if (progress === undefined) {
@@ -40,9 +205,12 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
   const eatGardenFood = useMutation(api.world.eatGardenFood);
   const marketBuySeedBundle = useMutation(api.world.marketBuySeedBundle);
   const marketSellVegetable = useMutation(api.world.marketSellVegetable);
+  const startCareerShift = useMutation(api.world.startCareerShift);
+  const finishCareerShift = useMutation(api.world.finishCareerShift);
   const [saving, setSaving] = useState(false);
   const [lifeBusy, setLifeBusy] = useState<string>();
   const [marketCrop, setMarketCrop] = useState<GardenCropId>('radish');
+  const [selectedProfession, setSelectedProfession] = useState<ProfessionId>('blacksmith');
   const [now, setNow] = useState(Date.now());
   const status = useQuery(api.world.residentStatus, {
     worldId,
@@ -86,7 +254,24 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
     sellPrice: 6,
     seedBundleCost: 10,
   };
+  const rawCareer = status.career ?? {
+    totalJobs: 0,
+    totalCoinsEarned: 0,
+    shopUnlockXp: 100,
+    energyCost: 10,
+    activeJob: undefined,
+    jobs: [],
+    progress: [],
+  };
+  const career = {
+    ...rawCareer,
+    jobs: rawCareer.jobs.length > 0 ? rawCareer.jobs : FALLBACK_CAREER_JOBS,
+    progress: rawCareer.progress.length > 0 ? rawCareer.progress : FALLBACK_CAREER_PROGRESS,
+  };
   const activeShift = status.studio.activeShift;
+  const activeCareerJob = career.activeJob;
+  const selectedCareerJob =
+    career.jobs.find((job) => job.profession === selectedProfession) ?? career.jobs[0];
   const activity = status.player?.activity;
   const displayCharacter =
     status.player?.character ?? status.profile?.character ?? identity.playerCharacter;
@@ -319,8 +504,106 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
       </section>
 
       <section className="resident-card mt-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-[#ead4aa]">职业临时工</p>
+          <span className="text-xs text-[#ead4aa]">{career.totalJobs} 次打工</span>
+        </div>
+        <div className="mt-3 grid gap-2">
+          <select
+            className="appearance-select"
+            value={selectedProfession}
+            onChange={(event) => setSelectedProfession(event.target.value as ProfessionId)}
+            disabled={!!activeCareerJob || career.jobs.length === 0}
+          >
+            {career.jobs.map((job) => (
+              <option key={job.profession} value={job.profession}>
+                {job.label} / {job.payCoins} 铜币 / 经验 +{job.xpGain}
+              </option>
+            ))}
+          </select>
+          {selectedCareerJob && (
+            <div className="career-job-preview">
+              <p className="text-[#fec742]">
+                {selectedCareerJob.workplace} · {selectedCareerJob.npcName}
+              </p>
+              <p>{selectedCareerJob.description}</p>
+              <p>
+                Lv.{selectedCareerJob.level} / 距离可开店还差 {selectedCareerJob.xpToOpenShop} 经验
+              </p>
+            </div>
+          )}
+          {activeCareerJob && (
+            <div className="career-job-preview">
+              <p className="text-[#fec742]">
+                正在{activeCareerJob.workplace}做{activeCareerJob.title}
+              </p>
+              <p>
+                进度 {formatProgress(activeCareerJob.progress)} / 工资 {activeCareerJob.payCoins}{' '}
+                铜币
+              </p>
+              <div className="life-energy-bar mt-2">
+                <span style={{ width: `${Math.floor(activeCareerJob.progress * 100)}%` }} />
+              </div>
+            </div>
+          )}
+          <button
+            className="observatory-control disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!status.player || !!lifeBusy || !!activeCareerJob || !selectedCareerJob}
+            type="button"
+            onClick={() =>
+              selectedCareerJob &&
+              void runResidentAction(
+                'career-start',
+                () =>
+                  startCareerShift({
+                    worldId,
+                    playerId: status.player!.id,
+                    profession: selectedCareerJob.profession,
+                  }),
+                `开始在${selectedCareerJob.workplace}打工`,
+              )
+            }
+          >
+            开始临时工
+          </button>
+          <button
+            className="observatory-control disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={
+              !status.player || !!lifeBusy || !activeCareerJob || !activeCareerJob.readyToFinish
+            }
+            type="button"
+            onClick={() =>
+              void runResidentAction(
+                'career-finish',
+                () => finishCareerShift({ worldId, playerId: status.player!.id }),
+                '临时工结算完成，经验上涨了',
+              )
+            }
+          >
+            领取工资
+          </button>
+        </div>
+        <div className="career-progress-grid mt-3">
+          {career.progress.map((entry) => (
+            <span
+              key={entry.profession}
+              className={`career-pill ${entry.canOpenShop ? 'career-pill-ready' : ''}`}
+            >
+              {entry.label} Lv.{entry.level} · {entry.experience}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="resident-card mt-4">
         <p className="text-sm text-[#ead4aa]">今日状态</p>
         <div className="mt-3 space-y-2 text-sm leading-tight text-white">
+          <p>
+            职业：
+            {activeCareerJob
+              ? `${activeCareerJob.title} ${formatProgress(activeCareerJob.progress)}`
+              : `${career.totalJobs} 次临时工，累计 ${career.totalCoinsEarned} 铜币`}
+          </p>
           <p>
             画室：
             {activeShift
@@ -424,7 +707,13 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
           {status.joined &&
             status.garden.readyPlots === 0 &&
             !activeShift &&
-            '去画室接一份临时工，或去小菜园播种。'}
+            !activeCareerJob &&
+            '去找一个职业 NPC 做临时工，或去小菜园播种。'}
+          {status.joined &&
+            activeCareerJob &&
+            !activeCareerJob.readyToFinish &&
+            '临时工还在进行中，可以先在镇上走走。'}
+          {status.joined && activeCareerJob?.readyToFinish && '临时工完成了，去领取工资。'}
           {status.joined &&
             activeShift &&
             !activeShift.readyToFinish &&

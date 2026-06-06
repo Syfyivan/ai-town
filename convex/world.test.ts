@@ -1,5 +1,7 @@
 import {
   ART_STUDIO_SHIFT_DURATION_MS,
+  CAREER_SHIFT_DURATION_MS,
+  CAREER_SHOP_UNLOCK_XP,
   GARDEN_MAX_ENERGY,
   GARDEN_PLOT_COUNT,
   GARDEN_STARTER_FOOD,
@@ -9,21 +11,26 @@ import {
   PLAYER_NAME_MAX_LENGTH,
   SEED_REPLICATOR_SUCCESS_RATE,
   SEED_SAVE_SUCCESS_RATE,
+  applyCareerShiftExperience,
   buildSessionToken,
   createArtStudioShift,
+  createCareerShift,
   createGardenPlots,
+  getCareerShiftProgress,
   getGardenPlotPhase,
   getStudioShiftProgress,
   getTownCalendar,
   harvestGardenPlot,
   plantGardenPlot,
   previewArtStudioJobs,
+  previewCareerJobs,
   resolveSeedSaving,
   sanitizeNpcProfile,
   sanitizePlayerCharacter,
   sanitizePlayerName,
   selectSessionCharacter,
   settleArtStudioShift,
+  summarizeCareerProgress,
   summarizeResidentAssets,
   waterGardenPlot,
 } from './world';
@@ -169,6 +176,70 @@ describe('art studio shift helpers', () => {
       'color',
       'detail',
     ]);
+  });
+});
+
+describe('career helpers', () => {
+  test('previews all MVP professions', () => {
+    expect(previewCareerJobs().map((job) => job.profession)).toEqual([
+      'blacksmith',
+      'carpenter',
+      'farmer',
+      'fisher',
+      'artist',
+      'mage',
+      'rancher',
+      'tavernKeeper',
+      'seedSeller',
+      'mayor',
+      'scientist',
+      'doctor',
+    ]);
+  });
+
+  test('creates a timed career shift', () => {
+    const shift = createCareerShift('blacksmith', 10_000);
+    expect(shift).toMatchObject({
+      profession: 'blacksmith',
+      npcName: '铁匠宋砧',
+      workplace: '溪山铁铺',
+      startedAt: 10_000,
+      endsAt: 10_000 + CAREER_SHIFT_DURATION_MS,
+      payCoins: 16,
+      xpGain: 14,
+    });
+    expect(getCareerShiftProgress(10_000, shift)).toBe(0);
+    expect(getCareerShiftProgress(10_000 + CAREER_SHIFT_DURATION_MS + 1, shift)).toBe(1);
+  });
+
+  test('applies career experience toward shop unlocks', () => {
+    const jobs = previewCareerJobs({ farmer: CAREER_SHOP_UNLOCK_XP - 1 });
+    const farmerJob = jobs.find((job) => job.profession === 'farmer')!;
+    expect(farmerJob.canOpenShop).toBe(false);
+    expect(farmerJob.xpToOpenShop).toBe(1);
+
+    const nextExperience = applyCareerShiftExperience(
+      {
+        blacksmith: 0,
+        carpenter: 0,
+        farmer: CAREER_SHOP_UNLOCK_XP - 1,
+        fisher: 0,
+        artist: 0,
+        mage: 0,
+        rancher: 0,
+        tavernKeeper: 0,
+        seedSeller: 0,
+        mayor: 0,
+        scientist: 0,
+        doctor: 0,
+      },
+      createCareerShift('farmer', 2_000),
+    );
+    const farmerProgress = summarizeCareerProgress(nextExperience).find(
+      (entry) => entry.profession === 'farmer',
+    )!;
+    expect(farmerProgress.canOpenShop).toBe(true);
+    expect(farmerProgress.xpToOpenShop).toBe(0);
   });
 });
 
