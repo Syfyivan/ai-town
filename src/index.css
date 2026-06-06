@@ -183,3 +183,22 @@ p[contenteditable='true']:empty::before {
 .shape-top-left-corner {
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }
+
+.observatory-item {
+  border: 3px solid #181425;
+  background: rgba(24, 20, 37, 0.45);
+  padding: 0.65rem 0.75rem;
+}
+
+.observatory-control {
+  min-height: 44px;
+  border: 3px solid #181425;
+  background: #3a4466;
+  color: #ffffff;
+  padding: 0.5rem 0.8rem;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.observatory-control:hover {
+  background: #5a6988;
+}

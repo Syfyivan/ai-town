@@ -179,8 +179,11 @@ function makeRange(values: number[]) {
   return [min, max] as const;
 }
 
-function normalize(value: number, range: readonly [number, number]) {
+export function normalizeMemoryScore(value: number, range: readonly [number, number]) {
   const [min, max] = range;
+  if (min === max) {
+    return 0;
+  }
   return (value - min) / (max - min);
 }
 
@@ -212,9 +215,9 @@ export const rankAndTouchMemories = internalMutation({
     const memoryScores = relatedMemories.map((memory, idx) => ({
       memory,
       overallScore:
-        normalize(args.candidates[idx]._score, relevanceRange) +
-        normalize(memory.importance, importanceRange) +
-        normalize(recencyScore[idx], recencyRange),
+        normalizeMemoryScore(args.candidates[idx]._score, relevanceRange) +
+        normalizeMemoryScore(memory.importance, importanceRange) +
+        normalizeMemoryScore(recencyScore[idx], recencyRange),
     }));
     memoryScores.sort((a, b) => b.overallScore - a.overallScore);
     const accessed = memoryScores.slice(0, args.n);

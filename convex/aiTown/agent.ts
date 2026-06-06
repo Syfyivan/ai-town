@@ -104,7 +104,7 @@ export class Agent {
       return;
     }
     if (conversation && member) {
-      const [otherPlayerId, otherMember] = [...conversation.participants.entries()].find(
+      const [otherPlayerId] = [...conversation.participants.entries()].find(
         ([id]) => id !== player.id,
       )!;
       const otherPlayer = game.world.players.get(otherPlayerId)!;
@@ -286,22 +286,32 @@ export type SerializedAgent = ObjectType<typeof serializedAgent>;
 
 type AgentOperations = typeof internal.aiTown.agentOperations;
 
-export async function runAgentOperation(ctx: MutationCtx, operation: string, args: any) {
-  let reference;
+export async function runAgentOperation(ctx: MutationCtx, operation: string, args: unknown) {
   switch (operation) {
     case 'agentRememberConversation':
-      reference = internal.aiTown.agentOperations.agentRememberConversation;
+      await ctx.scheduler.runAfter(
+        0,
+        internal.aiTown.agentOperations.agentRememberConversation,
+        args as FunctionArgs<typeof internal.aiTown.agentOperations.agentRememberConversation>,
+      );
       break;
     case 'agentGenerateMessage':
-      reference = internal.aiTown.agentOperations.agentGenerateMessage;
+      await ctx.scheduler.runAfter(
+        0,
+        internal.aiTown.agentOperations.agentGenerateMessage,
+        args as FunctionArgs<typeof internal.aiTown.agentOperations.agentGenerateMessage>,
+      );
       break;
     case 'agentDoSomething':
-      reference = internal.aiTown.agentOperations.agentDoSomething;
+      await ctx.scheduler.runAfter(
+        0,
+        internal.aiTown.agentOperations.agentDoSomething,
+        args as FunctionArgs<typeof internal.aiTown.agentOperations.agentDoSomething>,
+      );
       break;
     default:
       throw new Error(`Unknown operation: ${operation}`);
   }
-  await ctx.scheduler.runAfter(0, reference, args);
 }
 
 export const agentSendMessage = internalMutation({
@@ -358,7 +368,7 @@ export const findConversationCandidate = internalQuery({
           continue;
         }
       }
-      candidates.push({ id: otherPlayer.id, position });
+      candidates.push({ id: otherPlayer.id, position: otherPlayer.position });
     }
 
     // Sort by distance and take the nearest candidate.

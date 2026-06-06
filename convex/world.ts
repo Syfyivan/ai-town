@@ -98,7 +98,7 @@ export const userStatus = query({
   args: {
     worldId: v.id('worlds'),
   },
-  handler: async (ctx, args) => {
+  handler: () => {
     // const identity = await ctx.auth.getUserIdentity();
     // if (!identity) {
     //   return null;
@@ -175,7 +175,7 @@ export const sendWorldInput = mutation({
     // if (!identity) {
     //   throw new Error(`Not logged in`);
     // }
-    return await engineInsertInput(ctx, args.engineId, args.name as any, args.args);
+    return await engineInsertInput(ctx, args.engineId, args.name, args.args);
   },
 });
 
@@ -253,5 +253,146 @@ export const previousConversation = query({
       }
     }
     return null;
+  },
+});
+
+export const townObservatory = query({
+  args: {
+    worldId: v.id('worlds'),
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+
+    const playerDescriptions = await ctx.db
+      .query('playerDescriptions')
+      .withIndex('worldId', (q) => q.eq('worldId', args.worldId))
+      .collect();
+    const playerNames = new Map(
+      playerDescriptions.map((description) => [description.playerId, description.name]),
+    );
+    const playerName = (id: string) => playerNames.get(id) ?? id;
+
+    const archivedConversations = await ctx.db
+      .query('archivedConversations')
+      .withIndex('worldId', (q) => q.eq('worldId', args.worldId))
+      .collect();
+    const recentArchivedConversations = archivedConversations
+      .sort((a, b) => b.ended - a.ended)
+      .slice(0, 6);
+
+    const conversationSummaries = await Promise.all(
+      [
+        ...world.conversations.map((conversation) => ({
+          id: conversation.id,
+          kind: 'active' as const,
+          created: conversation.created,
+          ended: undefined,
+          numMessages: conversation.numMessages,
+          participants: conversation.participants.map((participant) =>
+            playerName(participant.playerId),
+          ),
+        })),
+        ...recentArchivedConversations.map((conversation) => ({
+          id: conversation.id,
+          kind: 'archived' as const,
+          created: conversation.created,
+          ended: conversation.ended,
+          numMessages: conversation.numMessages,
+          participants: conversation.participants.map(playerName),
+        })),
+      ].map(async (conversation) => {
+        const latestMessage = await ctx.db
+          .query('messages')
+          .withIndex('conversationId', (q) =>
+            q.eq('worldId', args.worldId).eq('conversationId', conversation.id),
+          )
+          .order('desc')
+          .first();
+        return {
+          ...conversation,
+          latestMessage: latestMessage?.text,
+          latestMessageAt: latestMessage?._creationTime,
+        };
+      }),
+    );
+
+    const memoryGroups = await Promise.all(
+      world.agents.map(async (agent) => {
+        const memories = await ctx.db
+          .query('memories')
+          .withIndex('playerId', (q) => q.eq('playerId', agent.playerId))
+          .order('desc')
+          .take(50);
+        return memories.map((memory) => ({
+          id: memory._id,
+          owner: playerName(memory.playerId),
+          description: memory.description,
+          importance: memory.importance,
+          type: memory.data.type,
+          createdAt: memory._creationTime,
+        }));
+      }),
+    );
+    const memories = memoryGroups.flat();
+    const recentMemories = memories
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 8);
+    const importantMemories = [...memories]
+      .sort((a, b) => b.importance - a.importance)
+      .slice(0, 5);
+
+    const participatedTogether = await ctx.db
+      .query('participatedTogether')
+      .withIndex('playerHistory', (q) => q.eq('worldId', args.worldId))
+      .collect();
+    const pairCounts = new Map<string, { players: string[]; count: number; lastEnded: number }>();
+    for (const edge of participatedTogether) {
+      const pair = [edge.player1, edge.player2].sort();
+      const key = pair.join('|');
+      const current = pairCounts.get(key);
+      if (!current) {
+        pairCounts.set(key, {
+          players: pair.map(playerName),
+          count: 1,
+          lastEnded: edge.ended,
+        });
+      } else {
+        current.count += 1;
+        current.lastEnded = Math.max(current.lastEnded, edge.ended);
+      }
+    }
+    const recurringPairs = [...pairCounts.values()]
+      .map((pair) => ({ ...pair, count: Math.ceil(pair.count / 2) }))
+      .sort((a, b) => b.count - a.count || b.lastEnded - a.lastEnded)
+      .slice(0, 5);
+
+    return {
+      summary: {
+        residents: world.players.length,
+        agents: world.agents.length,
+        humans: world.players.filter((player) => player.human).length,
+        activeConversations: world.conversations.length,
+        archivedConversations: archivedConversations.length,
+        sampledMemories: memories.length,
+        reflections: memories.filter((memory) => memory.type === 'reflection').length,
+      },
+      activeActivities: world.players
+        .filter((player) => player.activity && player.activity.until > Date.now())
+        .map((player) => ({
+          player: playerName(player.id),
+          description: player.activity!.description,
+          emoji: player.activity!.emoji,
+          until: player.activity!.until,
+        })),
+      conversations: conversationSummaries.sort(
+        (a, b) => (b.latestMessageAt ?? b.ended ?? b.created) - (a.latestMessageAt ?? a.ended ?? a.created),
+      ),
+      recentMemories,
+      importantMemories,
+      recurringPairs,
+    };
   },
 });

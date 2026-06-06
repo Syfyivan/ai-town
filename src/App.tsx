@@ -16,12 +16,15 @@ import InteractButton from './components/buttons/InteractButton.tsx';
 import FreezeButton from './components/FreezeButton.tsx';
 import { MAX_HUMAN_PLAYERS } from '../convex/constants.ts';
 import PoweredByConvex from './components/PoweredByConvex.tsx';
+import TownObservatory from './components/TownObservatory.tsx';
 
 export default function Home() {
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [observatoryOpen, setObservatoryOpen] = useState(false);
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-between font-body game-background">
       <PoweredByConvex />
+      <TownObservatory open={observatoryOpen} onClose={() => setObservatoryOpen(false)} />
 
       <ReactModal
         isOpen={helpModalOpen}
@@ -94,6 +97,9 @@ export default function Home() {
             <MusicButton />
             <Button href="https://github.com/a16z-infra/ai-town" imgUrl={starImg}>
               Star
+            </Button>
+            <Button imgUrl={starImg} onClick={() => setObservatoryOpen(true)}>
+              镇志
             </Button>
             <InteractButton />
             <Button imgUrl={helpImg} onClick={() => setHelpModalOpen(true)}>

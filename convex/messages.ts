@@ -3,6 +3,19 @@ import { mutation, query } from './_generated/server';
 import { insertInput } from './aiTown/insertInput';
 import { conversationId, playerId } from './aiTown/ids';
 
+export const MAX_MESSAGE_LENGTH = 1000;
+
+export function sanitizeMessageText(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    throw new Error('Message cannot be empty');
+  }
+  if (trimmed.length > MAX_MESSAGE_LENGTH) {
+    throw new Error(`Message cannot exceed ${MAX_MESSAGE_LENGTH} characters`);
+  }
+  return trimmed;
+}
+
 export const listMessages = query({
   args: {
     worldId: v.id('worlds'),
@@ -37,11 +50,12 @@ export const writeMessage = mutation({
     text: v.string(),
   },
   handler: async (ctx, args) => {
+    const text = sanitizeMessageText(args.text);
     await ctx.db.insert('messages', {
       conversationId: args.conversationId,
       author: args.playerId,
       messageUuid: args.messageUuid,
-      text: args.text,
+      text,
       worldId: args.worldId,
     });
     await insertInput(ctx, args.worldId, 'finishSendingMessage', {

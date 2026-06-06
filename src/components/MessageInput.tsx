@@ -55,8 +55,7 @@ export function MessageInput({
     if (!inputRef.current) {
       return;
     }
-    const text = inputRef.current.innerText;
-    inputRef.current.innerText = '';
+    const text = inputRef.current.innerText.trim();
     if (!text) {
       return;
     }
@@ -72,6 +71,7 @@ export function MessageInput({
       text,
       messageUuid,
     });
+    inputRef.current.innerText = '';
   };
   return (
     <div className="leading-tight mb-6">
