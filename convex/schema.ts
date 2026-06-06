@@ -21,6 +21,84 @@ export default defineSchema({
     .index('conversationId', ['worldId', 'conversationId'])
     .index('messageUuid', ['conversationId', 'messageUuid']),
 
+  visualNodes: defineTable({
+    sessionId: v.string(),
+    nodeId: v.string(),
+    parentNodeId: v.optional(v.string()),
+    title: v.string(),
+    prompt: v.string(),
+    depth: v.number(),
+    styleAnchor: v.string(),
+    imageStorageId: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    createdAt: v.number(),
+    hotspots: v.array(
+      v.object({
+        id: v.string(),
+        label: v.string(),
+        kind: v.string(),
+        rect: v.object({
+          x: v.number(),
+          y: v.number(),
+          w: v.number(),
+          h: v.number(),
+        }),
+        nextPrompt: v.string(),
+      }),
+    ),
+  })
+    .index('sessionId', ['sessionId', 'createdAt'])
+    .index('nodeId', ['sessionId', 'nodeId']),
+
+  artStudioWorkers: defineTable({
+    worldId: v.id('worlds'),
+    playerId,
+    painterName: v.string(),
+    florins: v.number(),
+    paintingSkill: v.number(),
+    creativity: v.number(),
+    reputation: v.number(),
+    shiftsCompleted: v.number(),
+    lastWorkedAt: v.optional(v.number()),
+    activeShift: v.optional(
+      v.object({
+        focus: v.union(v.literal('sketch'), v.literal('color'), v.literal('detail')),
+        title: v.string(),
+        description: v.string(),
+        startedAt: v.number(),
+        endsAt: v.number(),
+        basePay: v.number(),
+        skillGain: v.number(),
+        creativityGain: v.number(),
+        reputationGain: v.number(),
+      }),
+    ),
+  })
+    .index('worldId', ['worldId'])
+    .index('worldPlayer', ['worldId', 'playerId']),
+
+  gardeners: defineTable({
+    worldId: v.id('worlds'),
+    playerId,
+    gardenerName: v.string(),
+    coins: v.number(),
+    vegetables: v.number(),
+    gardeningSkill: v.number(),
+    harvestsCompleted: v.number(),
+    lastTendedAt: v.optional(v.number()),
+    plots: v.array(
+      v.object({
+        slot: v.number(),
+        crop: v.optional(v.union(v.literal('radish'), v.literal('greens'), v.literal('carrot'))),
+        plantedAt: v.optional(v.number()),
+        wateredAt: v.optional(v.number()),
+        readyAt: v.optional(v.number()),
+      }),
+    ),
+  })
+    .index('worldId', ['worldId'])
+    .index('worldPlayer', ['worldId', 'playerId']),
+
   ...agentTables,
   ...aiTownTables,
   ...engineTables,

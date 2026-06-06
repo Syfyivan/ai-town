@@ -89,8 +89,9 @@ export function Messages({
   const membershipNodes: typeof messageNodes = [];
   if (conversation.kind === 'active') {
     for (const [playerId, m] of conversation.doc.participants) {
-      const playerName = descriptions?.playerDescriptions.find((p) => p.playerId === playerId)
-        ?.name;
+      const playerName = descriptions?.playerDescriptions.find(
+        (p) => p.playerId === playerId,
+      )?.name;
       let started;
       if (m.status.kind === 'participating') {
         started = m.status.started;
@@ -99,7 +100,7 @@ export function Messages({
         membershipNodes.push({
           node: (
             <div key={`joined-${playerId}`} className="leading-tight mb-6">
-              <p className="text-brown-700 text-center">{playerName} joined the conversation.</p>
+              <p className="text-brown-700 text-center">{playerName} 加入了对话。</p>
             </div>
           ),
           time: started,
@@ -108,13 +109,14 @@ export function Messages({
     }
   } else {
     for (const playerId of conversation.doc.participants) {
-      const playerName = descriptions?.playerDescriptions.find((p) => p.playerId === playerId)
-        ?.name;
+      const playerName = descriptions?.playerDescriptions.find(
+        (p) => p.playerId === playerId,
+      )?.name;
       const started = conversation.doc.created;
       membershipNodes.push({
         node: (
           <div key={`joined-${playerId}`} className="leading-tight mb-6">
-            <p className="text-brown-700 text-center">{playerName} joined the conversation.</p>
+            <p className="text-brown-700 text-center">{playerName} 加入了对话。</p>
           </div>
         ),
         time: started,
@@ -123,7 +125,7 @@ export function Messages({
       membershipNodes.push({
         node: (
           <div key={`left-${playerId}`} className="leading-tight mb-6">
-            <p className="text-brown-700 text-center">{playerName} left the conversation.</p>
+            <p className="text-brown-700 text-center">{playerName} 离开了对话。</p>
           </div>
         ),
         // Always sort all "left" messages after the last message.
@@ -148,7 +150,7 @@ export function Messages({
             </div>
             <div className={clsx('bubble')}>
               <p className="bg-white -mx-3 -my-1">
-                <i>typing...</i>
+                <i>正在输入...</i>
               </p>
             </div>
           </div>

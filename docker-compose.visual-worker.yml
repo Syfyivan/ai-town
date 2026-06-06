@@ -1,0 +1,23 @@
+version: '3.6'
+
+services:
+  visual-worker:
+    image: node:22-alpine
+    working_dir: /workspace
+    command: node scripts/visual-image-worker.mjs
+    volumes:
+      - .:/workspace
+    ports:
+      - '${VISUAL_IMAGE_WORKER_PORT:-8787}:8787'
+    environment:
+      - PORT=8787
+      - SD_WEBUI_URL=${SD_WEBUI_URL:-}
+      - SD_STEPS=${SD_STEPS:-18}
+      - SD_CFG_SCALE=${SD_CFG_SCALE:-6.5}
+      - SD_SAMPLER=${SD_SAMPLER:-DPM++ 2M Karras}
+    networks:
+      - ai-town-network
+
+networks:
+  ai-town-network:
+    driver: bridge

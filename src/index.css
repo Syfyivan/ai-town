@@ -184,6 +184,69 @@ p[contenteditable='true']:empty::before {
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
+.cinema-ambient {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(90, 205, 232, 0.24), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(254, 199, 66, 0.2), transparent 28%),
+    linear-gradient(180deg, rgba(24, 20, 37, 0.64), rgba(7, 8, 18, 0.96));
+}
+
+.cinema-screen {
+  box-shadow:
+    0 0 0 4px rgba(254, 199, 66, 0.2),
+    0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.cinema-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  mix-blend-mode: screen;
+}
+
+.cinema-control,
+.cinema-replay,
+.cinema-film-button {
+  min-height: 44px;
+  border: 3px solid #181425;
+  background: #3a4466;
+  color: #ffffff;
+  padding: 0.5rem 0.8rem;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.cinema-control:hover,
+.cinema-replay:hover,
+.cinema-film-button:hover {
+  background: #5a6988;
+}
+
+.cinema-control:active,
+.cinema-replay:active,
+.cinema-film-button:active {
+  transform: translateY(1px);
+}
+
+.cinema-film-button-active {
+  background: #b86f50;
+  color: #181425;
+  text-shadow: none;
+}
+
+.cinema-loading-bar {
+  width: 35%;
+  background: linear-gradient(90deg, #5acde8, #fec742, #dd7c42);
+  animation: cinemaLoading 0.85s ease-in-out infinite alternate;
+}
+
 .observatory-item {
   border: 3px solid #181425;
   background: rgba(24, 20, 37, 0.45);
@@ -201,4 +264,208 @@ p[contenteditable='true']:empty::before {
 
 .observatory-control:hover {
   background: #5a6988;
+}
+
+.observatory-control:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.studio-shell {
+  border: 10px solid #181425;
+}
+
+.studio-stat,
+.studio-job,
+.studio-rank {
+  border: 4px solid #181425;
+  background: rgba(24, 20, 37, 0.5);
+}
+
+.studio-stat {
+  min-height: 84px;
+  padding: 0.65rem;
+}
+
+.studio-stat span {
+  display: block;
+  color: #ead4aa;
+  font-size: 0.82rem;
+}
+
+.studio-stat strong {
+  display: block;
+  color: #ffffff;
+  font-size: 1.85rem;
+  line-height: 1;
+  margin-top: 0.35rem;
+}
+
+.studio-job {
+  min-height: 176px;
+  padding: 0.85rem;
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+
+.studio-job:hover:not(:disabled),
+.studio-job-active {
+  background: #6e2146;
+}
+
+.studio-job:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.studio-job:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.studio-rank {
+  align-items: center;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 74px;
+  padding: 0.65rem;
+}
+
+@media (max-width: 900px) {
+  .studio-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .studio-layout aside {
+    border-left: 0;
+    border-top: 4px solid #181425;
+  }
+}
+
+.garden-shell {
+  border: 10px solid #181425;
+}
+
+.garden-stat,
+.garden-seed,
+.garden-plot,
+.garden-rank {
+  border: 4px solid #181425;
+  background: rgba(24, 20, 37, 0.5);
+}
+
+.garden-stat {
+  min-height: 84px;
+  padding: 0.65rem;
+}
+
+.garden-stat span {
+  display: block;
+  color: #ead4aa;
+  font-size: 0.82rem;
+}
+
+.garden-stat strong {
+  display: block;
+  color: #ffffff;
+  font-size: 1.85rem;
+  line-height: 1;
+  margin-top: 0.35rem;
+}
+
+.garden-select {
+  min-height: 44px;
+  border: 3px solid #181425;
+  background: #fffaf1;
+  color: #181425;
+  padding: 0.35rem 0.6rem;
+}
+
+.garden-seed,
+.garden-plot {
+  min-height: 156px;
+  padding: 0.85rem;
+}
+
+.garden-seed-active {
+  background: #3f5f2d;
+}
+
+.garden-soil {
+  display: block;
+  width: 46px;
+  height: 46px;
+  border: 4px solid #181425;
+  background: #8f563b;
+  box-shadow: inset 0 -8px 0 rgba(24, 20, 37, 0.18);
+}
+
+.garden-soil[data-phase='planted'] {
+  background:
+    linear-gradient(135deg, transparent 0 35%, #6abe30 35% 52%, transparent 52%),
+    #8f563b;
+}
+
+.garden-soil[data-phase='watered'] {
+  background:
+    linear-gradient(135deg, transparent 0 28%, #99e550 28% 46%, transparent 46%),
+    #5b6b34;
+}
+
+.garden-soil[data-phase='ready'] {
+  background:
+    linear-gradient(135deg, transparent 0 22%, #fec742 22% 42%, transparent 42%),
+    #6abe30;
+}
+
+.garden-rank {
+  align-items: center;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 74px;
+  padding: 0.65rem;
+}
+
+@media (max-width: 900px) {
+  .garden-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .garden-layout aside {
+    border-left: 0;
+    border-top: 4px solid #181425;
+  }
+}
+
+.npc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: #ead4aa;
+}
+
+.npc-field input,
+.npc-field select,
+.npc-field textarea {
+  border: 3px solid #181425;
+  background: #fffaf1;
+  color: #181425;
+  font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.npc-field textarea {
+  resize: vertical;
+}
+
+@keyframes cinemaLoading {
+  from {
+    transform: translateX(-15%);
+  }
+  to {
+    transform: translateX(205%);
+  }
 }

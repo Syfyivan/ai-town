@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { useMutation, useQuery } from 'convex/react';
-import { KeyboardEvent, useRef, useState } from 'react';
+import { KeyboardEvent, useRef } from 'react';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
 import { useSendInput } from '../hooks/sendInput';
@@ -19,8 +19,9 @@ export function MessageInput({
   conversation: Conversation;
 }) {
   const descriptions = useQuery(api.world.gameDescriptions, { worldId });
-  const humanName = descriptions?.playerDescriptions.find((p) => p.playerId === humanPlayer.id)
-    ?.name;
+  const humanName = descriptions?.playerDescriptions.find(
+    (p) => p.playerId === humanPlayer.id,
+  )?.name;
   const inputRef = useRef<HTMLParagraphElement>(null);
   const inflightUuid = useRef<string | undefined>();
   const writeMessage = useMutation(api.messages.writeMessage);
@@ -85,8 +86,8 @@ export function MessageInput({
           contentEditable
           style={{ outline: 'none' }}
           tabIndex={0}
-          placeholder="Type here"
-          onKeyDown={(e) => onKeyDown(e)}
+          placeholder="在这里输入"
+          onKeyDown={(e) => void onKeyDown(e)}
         />
       </div>
     </div>

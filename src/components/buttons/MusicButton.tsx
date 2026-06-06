@@ -43,10 +43,10 @@ export default function MusicButton() {
       <Button
         onClick={() => void flipSwitch()}
         className="hidden lg:block"
-        title="Play AI generated music (press m to play/mute)"
+        title="播放或暂停背景音乐（按 m 切换）"
         imgUrl={volumeImg}
       >
-        {isPlaying ? 'Mute' : 'Music'}
+        {isPlaying ? '静音' : '音乐'}
       </Button>
     </>
   );

@@ -1,0 +1,18 @@
+version: '3.6'
+
+services:
+  backend:
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+
+  dashboard:
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+
+networks:
+  ai-town-network:
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16

@@ -14,7 +14,11 @@ import { useServerGame } from '../hooks/serverGame.ts';
 
 export const SHOW_DEBUG_UI = !!import.meta.env.VITE_SHOW_DEBUG_UI;
 
-export default function Game() {
+export default function Game(props: {
+  onOpenCinema?: () => void;
+  onOpenArtStudio?: () => void;
+  onOpenGarden?: () => void;
+}) {
   const convex = useConvex();
   const [selectedElement, setSelectedElement] = useState<{
     kind: 'player';
@@ -58,6 +62,9 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
                     width={width}
                     height={height}
                     historicalTime={historicalTime}
+                    onOpenCinema={props.onOpenCinema}
+                    onOpenArtStudio={props.onOpenArtStudio}
+                    onOpenGarden={props.onOpenGarden}
                     setSelectedElement={setSelectedElement}
                   />
                 </ConvexProvider>

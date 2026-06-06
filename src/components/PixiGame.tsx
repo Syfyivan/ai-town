@@ -14,6 +14,9 @@ import { DebugPath } from './DebugPath.tsx';
 import { PositionIndicator } from './PositionIndicator.tsx';
 import { SHOW_DEBUG_UI } from './Game.tsx';
 import { ServerGame } from '../hooks/serverGame.ts';
+import { CinemaHotspot } from './CinemaHotspot.tsx';
+import { ArtStudioHotspot } from './ArtStudioHotspot.tsx';
+import { GardenHotspot } from './GardenHotspot.tsx';
 
 export const PixiGame = (props: {
   worldId: Id<'worlds'>;
@@ -22,6 +25,9 @@ export const PixiGame = (props: {
   historicalTime: number | undefined;
   width: number;
   height: number;
+  onOpenCinema?: () => void;
+  onOpenArtStudio?: () => void;
+  onOpenGarden?: () => void;
   setSelectedElement: SelectElement;
 }) => {
   // PIXI setup.
@@ -37,7 +43,7 @@ export const PixiGame = (props: {
 
   // Interaction for clicking on the world to navigate.
   const dragStart = useRef<{ screenX: number; screenY: number } | null>(null);
-  const onMapPointerDown = (e: any) => {
+  const onMapPointerDown = (e: PIXI.FederatedPointerEvent) => {
     // https://pixijs.download/dev/docs/PIXI.FederatedPointerEvent.html
     dragStart.current = { screenX: e.screenX, screenY: e.screenY };
   };
@@ -47,7 +53,7 @@ export const PixiGame = (props: {
     y: number;
     t: number;
   } | null>(null);
-  const onMapPointerUp = async (e: any) => {
+  const onMapPointerUp = async (e: PIXI.FederatedPointerEvent) => {
     if (dragStart.current) {
       const { screenX, screenY } = dragStart.current;
       dragStart.current = null;
@@ -107,6 +113,15 @@ export const PixiGame = (props: {
         onpointerup={onMapPointerUp}
         onpointerdown={onMapPointerDown}
       />
+      {props.onOpenCinema && (
+        <CinemaHotspot tileDim={tileDim} onOpenCinema={props.onOpenCinema} />
+      )}
+      {props.onOpenArtStudio && (
+        <ArtStudioHotspot tileDim={tileDim} onOpenArtStudio={props.onOpenArtStudio} />
+      )}
+      {props.onOpenGarden && (
+        <GardenHotspot tileDim={tileDim} onOpenGarden={props.onOpenGarden} />
+      )}
       {players.map(
         (p) =>
           // Only show the path for the human player in non-debug mode.

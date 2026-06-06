@@ -24,12 +24,12 @@ export default function FreezeButton() {
   return !stopAllowed ? null : (
     <>
       <Button
-        onClick={flipSwitch}
+        onClick={() => void flipSwitch()}
         className="hidden lg:block"
-        title="When freezing a world, the agents will take some time to stop what they are doing before they become frozen. "
+        title="冻结世界时，智能体会先完成当前动作再停止。"
         imgUrl="/assets/star.svg"
       >
-        {frozen ? 'Unfreeze' : 'Freeze'}
+        {frozen ? '恢复' : '冻结'}
       </Button>
     </>
   );

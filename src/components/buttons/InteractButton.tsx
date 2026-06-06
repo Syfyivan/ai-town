@@ -28,17 +28,17 @@ export default function InteractButton() {
       let inputId;
       try {
         inputId = await join({ worldId });
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (e instanceof ConvexError) {
-          toast.error(e.data);
+          toast.error(String(e.data));
           return;
         }
         throw e;
       }
       try {
         await waitForInput(convex, inputId);
-      } catch (e: any) {
-        toast.error(e.message);
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : String(e));
       }
     },
     [convex],
@@ -69,7 +69,7 @@ export default function InteractButton() {
   // }
   return (
     <Button imgUrl={interactImg} onClick={joinOrLeaveGame}>
-      {isPlaying ? 'Leave' : 'Interact'}
+      {isPlaying ? '离开' : '互动'}
     </Button>
   );
 }

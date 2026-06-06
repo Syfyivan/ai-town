@@ -9,6 +9,13 @@ import { Descriptions } from '../../data/characters';
 import { AgentDescription } from './agentDescription';
 import { Agent } from './agent';
 
+const customAgentDescription = {
+  name: v.string(),
+  character: v.string(),
+  identity: v.string(),
+  plan: v.string(),
+};
+
 export const agentInputs = {
   finishRememberConversation: inputHandler({
     args: {
@@ -118,10 +125,16 @@ export const agentInputs = {
   }),
   createAgent: inputHandler({
     args: {
-      descriptionIndex: v.number(),
+      descriptionIndex: v.optional(v.number()),
+      description: v.optional(v.object(customAgentDescription)),
     },
     handler: (game, now, args) => {
-      const description = Descriptions[args.descriptionIndex];
+      const description =
+        args.description ??
+        (args.descriptionIndex !== undefined ? Descriptions[args.descriptionIndex] : undefined);
+      if (!description) {
+        throw new Error(`Invalid agent description: ${JSON.stringify(args)}`);
+      }
       const playerId = Player.join(
         game,
         now,
