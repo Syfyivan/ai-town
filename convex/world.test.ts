@@ -1,6 +1,7 @@
 import {
   ART_STUDIO_SHIFT_DURATION_MS,
-  CAREER_SHIFT_DURATION_MS,
+  CAREER_WORK_END_HOUR,
+  CAREER_WORK_START_HOUR,
   CAREER_SHOP_UNLOCK_XP,
   GARDEN_MAX_ENERGY,
   GARDEN_PLOT_COUNT,
@@ -181,7 +182,8 @@ describe('art studio shift helpers', () => {
 
 describe('career helpers', () => {
   test('previews all MVP professions', () => {
-    expect(previewCareerJobs().map((job) => job.profession)).toEqual([
+    const jobs = previewCareerJobs();
+    expect(jobs.map((job) => job.profession)).toEqual([
       'blacksmith',
       'carpenter',
       'farmer',
@@ -195,21 +197,26 @@ describe('career helpers', () => {
       'scientist',
       'doctor',
     ]);
+    expect(jobs[0].workHoursLabel).toBe(`${CAREER_WORK_START_HOUR}:00-${CAREER_WORK_END_HOUR}:00`);
   });
 
-  test('creates a timed career shift', () => {
-    const shift = createCareerShift('blacksmith', 10_000);
+  test('creates a one-day career work record', () => {
+    const now = new Date('2026-06-06T10:00:00+08:00').getTime();
+    const calendar = getTownCalendar(now, 4);
+    const shift = createCareerShift('blacksmith', now, calendar);
     expect(shift).toMatchObject({
       profession: 'blacksmith',
       npcName: '铁匠宋砧',
       workplace: '溪山铁铺',
-      startedAt: 10_000,
-      endsAt: 10_000 + CAREER_SHIFT_DURATION_MS,
+      startedAt: now,
+      endsAt: now,
+      workDayNumber: 5,
+      workDateLabel: '溪山历 1月5日',
+      workHoursLabel: '10:00-18:00',
       payCoins: 16,
       xpGain: 14,
     });
-    expect(getCareerShiftProgress(10_000, shift)).toBe(0);
-    expect(getCareerShiftProgress(10_000 + CAREER_SHIFT_DURATION_MS + 1, shift)).toBe(1);
+    expect(getCareerShiftProgress(now, shift)).toBe(1);
   });
 
   test('applies career experience toward shop unlocks', () => {

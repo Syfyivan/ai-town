@@ -158,7 +158,7 @@ const FALLBACK_CAREER_BASE: Array<{
 
 const FALLBACK_CAREER_JOBS = FALLBACK_CAREER_BASE.map((job) => ({
   ...job,
-  durationMs: 45_000,
+  workHoursLabel: '10:00-18:00',
   level: 1,
   experience: 0,
   xpToOpenShop: 100,
@@ -205,7 +205,7 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
   const eatGardenFood = useMutation(api.world.eatGardenFood);
   const marketBuySeedBundle = useMutation(api.world.marketBuySeedBundle);
   const marketSellVegetable = useMutation(api.world.marketSellVegetable);
-  const startCareerShift = useMutation(api.world.startCareerShift);
+  const workCareerDay = useMutation(api.world.workCareerDay);
   const finishCareerShift = useMutation(api.world.finishCareerShift);
   const [saving, setSaving] = useState(false);
   const [lifeBusy, setLifeBusy] = useState<string>();
@@ -259,6 +259,12 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
     totalCoinsEarned: 0,
     shopUnlockXp: 100,
     energyCost: 10,
+    workHoursLabel: '10:00-18:00',
+    workedToday: false,
+    lastWorkDayNumber: undefined,
+    lastWorkDateLabel: undefined,
+    lastWorkedProfession: undefined,
+    lastWorkedProfessionLabel: undefined,
     activeJob: undefined,
     jobs: [],
     progress: [],
@@ -272,6 +278,8 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
   const activeCareerJob = career.activeJob;
   const selectedCareerJob =
     career.jobs.find((job) => job.profession === selectedProfession) ?? career.jobs[0];
+  const selectedCareerWorkHours =
+    selectedCareerJob?.workHoursLabel ?? career.workHoursLabel ?? '10:00-18:00';
   const activity = status.player?.activity;
   const displayCharacter =
     status.player?.character ?? status.profile?.character ?? identity.playerCharacter;
@@ -506,14 +514,14 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
       <section className="resident-card mt-4">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-[#ead4aa]">职业临时工</p>
-          <span className="text-xs text-[#ead4aa]">{career.totalJobs} 次打工</span>
+          <span className="text-xs text-[#ead4aa]">{career.totalJobs} 天工</span>
         </div>
         <div className="mt-3 grid gap-2">
           <select
             className="appearance-select"
             value={selectedProfession}
             onChange={(event) => setSelectedProfession(event.target.value as ProfessionId)}
-            disabled={!!activeCareerJob || career.jobs.length === 0}
+            disabled={career.workedToday || !!activeCareerJob || career.jobs.length === 0}
           >
             {career.jobs.map((job) => (
               <option key={job.profession} value={job.profession}>
@@ -528,14 +536,23 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
               </p>
               <p>{selectedCareerJob.description}</p>
               <p>
+                工作时间 {selectedCareerWorkHours} / 消耗能量 {career.energyCost}
+              </p>
+              <p>
                 Lv.{selectedCareerJob.level} / 距离可开店还差 {selectedCareerJob.xpToOpenShop} 经验
               </p>
             </div>
           )}
+          {career.workedToday && (
+            <p className="text-sm leading-tight text-[#ead4aa]">
+              今天已经在{career.lastWorkedProfessionLabel ?? '某位居民'}那里做过一天工，
+              {career.lastWorkDateLabel ?? '睡一觉'}后就能再接下一份。
+            </p>
+          )}
           {activeCareerJob && (
             <div className="career-job-preview">
               <p className="text-[#fec742]">
-                正在{activeCareerJob.workplace}做{activeCareerJob.title}
+                有一份旧临时工记录：{activeCareerJob.workplace} · {activeCareerJob.title}
               </p>
               <p>
                 进度 {formatProgress(activeCareerJob.progress)} / 工资 {activeCareerJob.payCoins}{' '}
@@ -548,40 +565,48 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
           )}
           <button
             className="observatory-control disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!status.player || !!lifeBusy || !!activeCareerJob || !selectedCareerJob}
+            disabled={
+              !status.player ||
+              !!lifeBusy ||
+              career.workedToday ||
+              !!activeCareerJob ||
+              !selectedCareerJob
+            }
             type="button"
             onClick={() =>
               selectedCareerJob &&
               void runResidentAction(
-                'career-start',
+                'career-day',
                 () =>
-                  startCareerShift({
+                  workCareerDay({
                     worldId,
                     playerId: status.player!.id,
                     profession: selectedCareerJob.profession,
                   }),
-                `开始在${selectedCareerJob.workplace}打工`,
+                `完成${selectedCareerWorkHours}临时工，拿到一天工资`,
               )
             }
           >
-            开始临时工
+            做一天临时工
           </button>
-          <button
-            className="observatory-control disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={
-              !status.player || !!lifeBusy || !activeCareerJob || !activeCareerJob.readyToFinish
-            }
-            type="button"
-            onClick={() =>
-              void runResidentAction(
-                'career-finish',
-                () => finishCareerShift({ worldId, playerId: status.player!.id }),
-                '临时工结算完成，经验上涨了',
-              )
-            }
-          >
-            领取工资
-          </button>
+          {activeCareerJob && (
+            <button
+              className="observatory-control disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={
+                !status.player || !!lifeBusy || !activeCareerJob || !activeCareerJob.readyToFinish
+              }
+              type="button"
+              onClick={() =>
+                void runResidentAction(
+                  'career-finish',
+                  () => finishCareerShift({ worldId, playerId: status.player!.id }),
+                  '旧临时工结算完成，经验上涨了',
+                )
+              }
+            >
+              领取旧工资
+            </button>
+          )}
         </div>
         <div className="career-progress-grid mt-3">
           {career.progress.map((entry) => (
@@ -602,7 +627,9 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
             职业：
             {activeCareerJob
               ? `${activeCareerJob.title} ${formatProgress(activeCareerJob.progress)}`
-              : `${career.totalJobs} 次临时工，累计 ${career.totalCoinsEarned} 铜币`}
+              : career.workedToday
+                ? `今天已在${career.lastWorkedProfessionLabel ?? '居民家'}做过一天工`
+                : `${career.totalJobs} 天临时工，累计 ${career.totalCoinsEarned} 铜币`}
           </p>
           <p>
             画室：
@@ -708,12 +735,19 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
             status.garden.readyPlots === 0 &&
             !activeShift &&
             !activeCareerJob &&
-            '去找一个职业 NPC 做临时工，或去小菜园播种。'}
+            !career.workedToday &&
+            '去找一个职业 NPC 做一天临时工，或去小菜园播种。'}
+          {status.joined &&
+            status.garden.readyPlots === 0 &&
+            !activeShift &&
+            !activeCareerJob &&
+            career.workedToday &&
+            '今天的临时工已经完成，可以种菜、社交，或者睡觉进入下一天。'}
           {status.joined &&
             activeCareerJob &&
             !activeCareerJob.readyToFinish &&
-            '临时工还在进行中，可以先在镇上走走。'}
-          {status.joined && activeCareerJob?.readyToFinish && '临时工完成了，去领取工资。'}
+            '旧临时工还在进行中，可以先在镇上走走。'}
+          {status.joined && activeCareerJob?.readyToFinish && '旧临时工完成了，去领取工资。'}
           {status.joined &&
             activeShift &&
             !activeShift.readyToFinish &&

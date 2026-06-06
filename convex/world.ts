@@ -35,7 +35,8 @@ export const MARKET_SEED_BUNDLE_COST = 10;
 export const MARKET_VEGETABLE_SELL_PRICE = 6;
 export const SEED_SAVE_SUCCESS_RATE = 0.4;
 export const SEED_REPLICATOR_SUCCESS_RATE = 0.95;
-export const CAREER_SHIFT_DURATION_MS = 45_000;
+export const CAREER_WORK_START_HOUR = 10;
+export const CAREER_WORK_END_HOUR = 18;
 export const CAREER_ENERGY_COST = 10;
 export const CAREER_SHOP_UNLOCK_XP = 100;
 
@@ -107,6 +108,9 @@ export type CareerShift = {
   workplace: string;
   startedAt: number;
   endsAt: number;
+  workDayNumber?: number;
+  workDateLabel?: string;
+  workHoursLabel?: string;
   payCoins: number;
   xpGain: number;
 };
@@ -746,6 +750,12 @@ function professionLevel(experience: number) {
   return Math.floor(experience / 50) + 1;
 }
 
+function careerWorkHoursLabel() {
+  return `${String(CAREER_WORK_START_HOUR).padStart(2, '0')}:00-${String(
+    CAREER_WORK_END_HOUR,
+  ).padStart(2, '0')}:00`;
+}
+
 export function summarizeCareerProgress(experience?: Partial<ProfessionExperience>) {
   const normalizedExperience = normalizeProfessionExperience(experience);
   return (Object.keys(PROFESSION_CONFIG) as ProfessionId[]).map((professionId) => {
@@ -764,7 +774,11 @@ export function summarizeCareerProgress(experience?: Partial<ProfessionExperienc
   });
 }
 
-export function createCareerShift(professionId: ProfessionId, now: number): CareerShift {
+export function createCareerShift(
+  professionId: ProfessionId,
+  now: number,
+  calendar = getTownCalendar(now),
+): CareerShift {
   const config = PROFESSION_CONFIG[professionId];
   return {
     profession: professionId,
@@ -772,7 +786,10 @@ export function createCareerShift(professionId: ProfessionId, now: number): Care
     npcName: config.npcName,
     workplace: config.workplace,
     startedAt: now,
-    endsAt: now + CAREER_SHIFT_DURATION_MS,
+    endsAt: now,
+    workDayNumber: calendar.dayNumber,
+    workDateLabel: `溪山历 ${calendar.month}月${calendar.dayOfMonth}日`,
+    workHoursLabel: careerWorkHoursLabel(),
     payCoins: config.payCoins,
     xpGain: config.xpGain,
   };
@@ -815,7 +832,7 @@ export function previewCareerJobs(experience?: Partial<ProfessionExperience>) {
       description: config.description,
       payCoins: config.payCoins,
       xpGain: config.xpGain,
-      durationMs: CAREER_SHIFT_DURATION_MS,
+      workHoursLabel: careerWorkHoursLabel(),
       level: progress.level,
       experience: progress.experience,
       xpToOpenShop: progress.xpToOpenShop,
@@ -1390,6 +1407,14 @@ export const residentStatus = query({
         totalCoinsEarned: careerProfile?.totalCoinsEarned ?? 0,
         shopUnlockXp: CAREER_SHOP_UNLOCK_XP,
         energyCost: CAREER_ENERGY_COST,
+        workHoursLabel: careerWorkHoursLabel(),
+        workedToday: careerProfile?.lastWorkDayNumber === calendar.dayNumber,
+        lastWorkDayNumber: careerProfile?.lastWorkDayNumber,
+        lastWorkDateLabel: careerProfile?.lastWorkDateLabel,
+        lastWorkedProfession: careerProfile?.lastWorkedProfession,
+        lastWorkedProfessionLabel: careerProfile?.lastWorkedProfession
+          ? PROFESSION_CONFIG[careerProfile.lastWorkedProfession].label
+          : undefined,
         activeJob: careerProfile?.activeJob
           ? {
               ...careerProfile.activeJob,
@@ -1560,6 +1585,109 @@ export const finishArtStudioShift = mutation({
   },
 });
 
+export const workCareerDay = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    playerId,
+    profession,
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    const player = requireHumanPlayer(world, args.playerId);
+
+    const now = Date.now();
+    const residentProfile = player.human
+      ? await findResidentProfile(ctx.db, world._id, player.human)
+      : undefined;
+    const calendar = getTownCalendar(now, residentProfile?.daysSlept ?? 0);
+    const careerProfile = await findCareerProfile(ctx.db, world._id, args.playerId);
+    if (careerProfile?.lastWorkDayNumber === calendar.dayNumber) {
+      throw new Error('今天已经做过一天临时工了，睡一觉明天再去。');
+    }
+    if (careerProfile?.activeJob) {
+      throw new Error('还有一份旧临时工记录，请先领取工资再做今天的工。');
+    }
+
+    const gardener = await findGardener(ctx.db, world._id, args.playerId);
+    const life = spendGardenEnergy(gardenLifeFromRecord(gardener ?? undefined), CAREER_ENERGY_COST);
+    const residentName = await getPlayerDisplayName(ctx.db, world._id, args.playerId);
+    const dayWork = createCareerShift(args.profession, now, calendar);
+    const experience = normalizeProfessionExperience(careerProfile?.experience);
+    const nextExperience = applyCareerShiftExperience(experience, dayWork);
+    const nextCoins = (gardener?.coins ?? INITIAL_GARDENER_STATS.coins) + dayWork.payCoins;
+
+    if (gardener) {
+      await ctx.db.patch(gardener._id, {
+        gardenerName: residentName,
+        coins: nextCoins,
+        energy: life.energy,
+        food: life.food,
+        seeds: life.seeds,
+        seedReplicator: life.seedReplicator,
+        lastTendedAt: now,
+      });
+    } else {
+      await ctx.db.insert('gardeners', {
+        worldId: world._id,
+        playerId: args.playerId,
+        gardenerName: residentName,
+        ...INITIAL_GARDENER_STATS,
+        coins: nextCoins,
+        energy: life.energy,
+        food: life.food,
+        seeds: life.seeds,
+        seedReplicator: life.seedReplicator,
+        plots: createGardenPlots(),
+        lastTendedAt: now,
+      });
+    }
+
+    if (careerProfile) {
+      await ctx.db.patch(careerProfile._id, {
+        residentName,
+        experience: nextExperience,
+        totalJobs: careerProfile.totalJobs + 1,
+        totalCoinsEarned: careerProfile.totalCoinsEarned + dayWork.payCoins,
+        lastWorkDayNumber: calendar.dayNumber,
+        lastWorkDateLabel: dayWork.workDateLabel,
+        lastWorkedProfession: args.profession,
+        lastWorkedAt: now,
+      });
+    } else {
+      await ctx.db.insert('careerProfiles', {
+        worldId: world._id,
+        playerId: args.playerId,
+        residentName,
+        experience: nextExperience,
+        totalJobs: 1,
+        totalCoinsEarned: dayWork.payCoins,
+        lastWorkDayNumber: calendar.dayNumber,
+        lastWorkDateLabel: dayWork.workDateLabel,
+        lastWorkedProfession: args.profession,
+        lastWorkedAt: now,
+      });
+    }
+
+    const progress = summarizeCareerProgress(nextExperience).find(
+      (entry) => entry.profession === args.profession,
+    )!;
+    return {
+      ...dayWork,
+      label: PROFESSION_CONFIG[args.profession].label,
+      experience: progress.experience,
+      level: progress.level,
+      canOpenShop: progress.canOpenShop,
+      totalJobs: (careerProfile?.totalJobs ?? 0) + 1,
+      totalCoinsEarned: (careerProfile?.totalCoinsEarned ?? 0) + dayWork.payCoins,
+      coins: nextCoins,
+      energy: life.energy,
+    };
+  },
+});
+
 export const startCareerShift = mutation({
   args: {
     worldId: v.id('worlds'),
@@ -1571,7 +1699,7 @@ export const startCareerShift = mutation({
     if (!world) {
       throw new Error(`Invalid world ID: ${args.worldId}`);
     }
-    requireHumanPlayer(world, args.playerId);
+    const player = requireHumanPlayer(world, args.playerId);
 
     const careerProfile = await findCareerProfile(ctx.db, world._id, args.playerId);
     if (careerProfile?.activeJob) {
@@ -1583,10 +1711,14 @@ export const startCareerShift = mutation({
     }
 
     const now = Date.now();
+    const residentProfile = player.human
+      ? await findResidentProfile(ctx.db, world._id, player.human)
+      : undefined;
+    const calendar = getTownCalendar(now, residentProfile?.daysSlept ?? 0);
     const gardener = await findGardener(ctx.db, world._id, args.playerId);
     const life = spendGardenEnergy(gardenLifeFromRecord(gardener ?? undefined), CAREER_ENERGY_COST);
     const residentName = await getPlayerDisplayName(ctx.db, world._id, args.playerId);
-    const activeJob = createCareerShift(args.profession, now);
+    const activeJob = createCareerShift(args.profession, now, calendar);
 
     if (gardener) {
       await ctx.db.patch(gardener._id, {
@@ -1643,7 +1775,7 @@ export const finishCareerShift = mutation({
     if (!world) {
       throw new Error(`Invalid world ID: ${args.worldId}`);
     }
-    requireHumanPlayer(world, args.playerId);
+    const player = requireHumanPlayer(world, args.playerId);
 
     const careerProfile = await findCareerProfile(ctx.db, world._id, args.playerId);
     if (!careerProfile?.activeJob) {
@@ -1654,6 +1786,12 @@ export const finishCareerShift = mutation({
     if (getCareerShiftProgress(now, careerProfile.activeJob) < 1) {
       throw new Error('这份临时工还没有做完。');
     }
+    const residentProfile = player.human
+      ? await findResidentProfile(ctx.db, world._id, player.human)
+      : undefined;
+    const calendar = getTownCalendar(now, residentProfile?.daysSlept ?? 0);
+    const workDateLabel =
+      careerProfile.activeJob.workDateLabel ?? `溪山历 ${calendar.month}月${calendar.dayOfMonth}日`;
 
     const experience = normalizeProfessionExperience(careerProfile.experience);
     const nextExperience = applyCareerShiftExperience(experience, careerProfile.activeJob);
@@ -1662,6 +1800,9 @@ export const finishCareerShift = mutation({
       totalJobs: careerProfile.totalJobs + 1,
       totalCoinsEarned: careerProfile.totalCoinsEarned + careerProfile.activeJob.payCoins,
       activeJob: undefined,
+      lastWorkDayNumber: careerProfile.activeJob.workDayNumber ?? calendar.dayNumber,
+      lastWorkDateLabel: workDateLabel,
+      lastWorkedProfession: careerProfile.activeJob.profession,
       lastWorkedAt: now,
     });
 
