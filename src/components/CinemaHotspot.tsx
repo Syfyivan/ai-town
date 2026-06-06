@@ -1,6 +1,11 @@
 import { PixiComponent, applyDefaultProps } from '@pixi/react';
 import * as PIXI from 'pixi.js';
-import { GENTLE_TILES, addGentleTile, addGentleTileGrid } from './gentleTownTiles';
+import {
+  GENTLE_TILES,
+  addGentlePathPatch,
+  addGentleTile,
+  addGentleTileGrid,
+} from './gentleTownTiles';
 
 type CinemaHotspotProps = {
   onOpenCinema: () => void;
@@ -12,22 +17,31 @@ type CinemaHotspotContainer = PIXI.Container & {
 };
 
 export const CINEMA_REGION = {
-  x: 33,
-  y: 16,
-  width: 8,
-  height: 5,
+  x: 31,
+  y: 14,
+  width: 12,
+  height: 9,
+};
+
+export const CINEMA_PORTAL_REGION = {
+  x: 35,
+  y: 21,
+  width: 2,
+  height: 1,
 };
 
 function buildCinemaSprite(tileDim: number) {
-  const width = CINEMA_REGION.width * tileDim;
-  const height = CINEMA_REGION.height * tileDim;
   const container = new PIXI.Container() as CinemaHotspotContainer;
   const graphics = new PIXI.Graphics();
 
   graphics.beginFill(0x181425, 0.18);
-  graphics.drawEllipse(width / 2, tileDim * 4.15, tileDim * 2.25, tileDim * 0.32);
+  graphics.drawEllipse(tileDim * 5.15, tileDim * 5.55, tileDim * 2.25, tileDim * 0.32);
   graphics.endFill();
   container.addChild(graphics);
+
+  addGentlePathPatch(container, tileDim, 4, 5.35);
+  addGentlePathPatch(container, tileDim, 4.2, 4);
+  addGentlePathPatch(container, tileDim, 4.55, 2.7);
 
   addGentleTileGrid(
     container,
@@ -37,16 +51,21 @@ function buildCinemaSprite(tileDim: number) {
       [GENTLE_TILES.tentBottomLeft, GENTLE_TILES.tentBottom, GENTLE_TILES.tentBottomRight],
     ],
     tileDim,
-    2.65,
+    4.05,
     0.95,
   );
-  addGentleTile(container, GENTLE_TILES.post, tileDim, 1.45, 2.15);
-  addGentleTile(container, GENTLE_TILES.post, tileDim, 5.95, 2.15);
-  addGentleTile(container, GENTLE_TILES.log, tileDim, 1.35, 3.45);
-  addGentleTile(container, GENTLE_TILES.rock, tileDim, 5.85, 3.38);
-  addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 6.25, 2.95);
+  addGentleTile(container, GENTLE_TILES.post, tileDim, 3.2, 6.05);
+  addGentleTile(container, GENTLE_TILES.post, tileDim, 5.2, 6.05);
+  addGentleTile(container, GENTLE_TILES.log, tileDim, 2.25, 4.85);
+  addGentleTile(container, GENTLE_TILES.rock, tileDim, 7.45, 4.85);
+  addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 8.25, 3.75);
 
-  container.hitArea = new PIXI.Rectangle(0, 0, width, height);
+  container.hitArea = new PIXI.Rectangle(
+    (CINEMA_PORTAL_REGION.x - CINEMA_REGION.x) * tileDim,
+    (CINEMA_PORTAL_REGION.y - CINEMA_REGION.y) * tileDim,
+    CINEMA_PORTAL_REGION.width * tileDim,
+    CINEMA_PORTAL_REGION.height * tileDim,
+  );
   container.eventMode = 'static';
   container.cursor = 'pointer';
   return container;

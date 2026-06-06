@@ -1,6 +1,11 @@
 import { PixiComponent, applyDefaultProps } from '@pixi/react';
 import * as PIXI from 'pixi.js';
-import { GENTLE_TILES, addGentleTile, addGentleTileGrid } from './gentleTownTiles';
+import {
+  GENTLE_TILES,
+  addGentlePathPatch,
+  addGentleTile,
+  addGentleTileGrid,
+} from './gentleTownTiles';
 
 type GardenHotspotProps = {
   onOpenGarden: () => void;
@@ -12,22 +17,32 @@ type GardenHotspotContainer = PIXI.Container & {
 };
 
 export const GARDEN_REGION = {
-  x: 43,
-  y: 30,
-  width: 7,
-  height: 5,
+  x: 42,
+  y: 29,
+  width: 11,
+  height: 8,
+};
+
+export const GARDEN_PORTAL_REGION = {
+  x: 46,
+  y: 36,
+  width: 2,
+  height: 1,
 };
 
 function buildGardenSprite(tileDim: number) {
   const width = GARDEN_REGION.width * tileDim;
-  const height = GARDEN_REGION.height * tileDim;
   const container = new PIXI.Container() as GardenHotspotContainer;
   const graphics = new PIXI.Graphics();
 
   graphics.beginFill(0x181425, 0.14);
-  graphics.drawEllipse(width / 2, tileDim * 3.35, tileDim * 2.35, tileDim * 0.34);
+  graphics.drawEllipse(width / 2, tileDim * 5.4, tileDim * 2.45, tileDim * 0.32);
   graphics.endFill();
   container.addChild(graphics);
+
+  addGentlePathPatch(container, tileDim, 4, 5.3);
+  addGentlePathPatch(container, tileDim, 4.15, 4);
+  addGentlePathPatch(container, tileDim, 3.35, 2.85);
 
   addGentleTileGrid(
     container,
@@ -36,8 +51,8 @@ function buildGardenSprite(tileDim: number) {
       [GENTLE_TILES.fieldBottomLeft, GENTLE_TILES.fieldBottomRight],
     ],
     tileDim,
-    2.35,
-    1.2,
+    2.4,
+    1,
   );
   addGentleTileGrid(
     container,
@@ -46,15 +61,22 @@ function buildGardenSprite(tileDim: number) {
       [GENTLE_TILES.fieldBottomLeft, GENTLE_TILES.fieldBottomRight],
     ],
     tileDim,
-    3.6,
-    2.15,
+    4.05,
+    1.95,
   );
-  addGentleTile(container, GENTLE_TILES.stump, tileDim, 1.25, 2.45);
-  addGentleTile(container, GENTLE_TILES.bush, tileDim, 5.1, 1.35);
-  addGentleTile(container, GENTLE_TILES.flowerYellow, tileDim, 1.25, 1.2);
-  addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 5.35, 3.15);
-  addGentleTile(container, GENTLE_TILES.mushroom, tileDim, 4.95, 3.75);
-  container.hitArea = new PIXI.Rectangle(0, 0, width, height);
+  addGentleTile(container, GENTLE_TILES.stump, tileDim, 1.45, 3.25);
+  addGentleTile(container, GENTLE_TILES.bush, tileDim, 7.1, 1.35);
+  addGentleTile(container, GENTLE_TILES.flowerYellow, tileDim, 1.45, 1.3);
+  addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 7.45, 4.35);
+  addGentleTile(container, GENTLE_TILES.mushroom, tileDim, 6.4, 4.9);
+  addGentleTile(container, GENTLE_TILES.post, tileDim, 3.8, 6.05);
+  addGentleTile(container, GENTLE_TILES.post, tileDim, 5.75, 6.05);
+  container.hitArea = new PIXI.Rectangle(
+    (GARDEN_PORTAL_REGION.x - GARDEN_REGION.x) * tileDim,
+    (GARDEN_PORTAL_REGION.y - GARDEN_REGION.y) * tileDim,
+    GARDEN_PORTAL_REGION.width * tileDim,
+    GARDEN_PORTAL_REGION.height * tileDim,
+  );
   container.eventMode = 'static';
   container.cursor = 'pointer';
   return container;

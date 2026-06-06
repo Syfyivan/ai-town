@@ -14,11 +14,33 @@ import { DebugPath } from './DebugPath.tsx';
 import { PositionIndicator } from './PositionIndicator.tsx';
 import { SHOW_DEBUG_UI } from './Game.tsx';
 import { ServerGame } from '../hooks/serverGame.ts';
-import { CINEMA_REGION, CinemaHotspot } from './CinemaHotspot.tsx';
-import { ART_STUDIO_REGION, ArtStudioHotspot } from './ArtStudioHotspot.tsx';
-import { GARDEN_REGION, GardenHotspot } from './GardenHotspot.tsx';
+import { CINEMA_PORTAL_REGION, CinemaHotspot } from './CinemaHotspot.tsx';
+import { ART_STUDIO_PORTAL_REGION, ArtStudioHotspot } from './ArtStudioHotspot.tsx';
+import { GARDEN_PORTAL_REGION, GardenHotspot } from './GardenHotspot.tsx';
 import { useSessionIdentity } from '../hooks/useSessionIdentity.ts';
 import { Point } from '../../convex/util/types.ts';
+
+type TileRegion = { x: number; y: number; width: number; height: number };
+
+function pointInRegion(position: Point, region: TileRegion) {
+  return (
+    position.x >= region.x &&
+    position.x < region.x + region.width &&
+    position.y >= region.y &&
+    position.y < region.y + region.height
+  );
+}
+
+function tilePosition(position: Point) {
+  return {
+    x: Math.floor(position.x),
+    y: Math.floor(position.y),
+  };
+}
+
+function positionKey(position: Point) {
+  return `${Math.floor(position.x)}:${Math.floor(position.y)}`;
+}
 
 export const PixiGame = (props: {
   worldId: Id<'worlds'>;
@@ -48,6 +70,7 @@ export const PixiGame = (props: {
 
   const moveTo = useSendInput(props.engineId, 'moveTo');
   const lastKeyboardMoveAt = useRef(0);
+  const previousPortalPositionRef = useRef<string | null>(null);
 
   // Interaction for clicking on the world to navigate.
   const dragStart = useRef<{ screenX: number; screenY: number } | null>(null);
@@ -177,15 +200,15 @@ export const PixiGame = (props: {
 
       if (key === 'x') {
         event.preventDefault();
-        if (props.onOpenArtStudio && nearRegion(humanPlayer.position, ART_STUDIO_REGION)) {
+        if (props.onOpenArtStudio && nearRegion(humanPlayer.position, ART_STUDIO_PORTAL_REGION)) {
           props.onOpenArtStudio();
           return;
         }
-        if (props.onOpenGarden && nearRegion(humanPlayer.position, GARDEN_REGION)) {
+        if (props.onOpenGarden && nearRegion(humanPlayer.position, GARDEN_PORTAL_REGION)) {
           props.onOpenGarden();
           return;
         }
-        if (props.onOpenCinema && nearRegion(humanPlayer.position, CINEMA_REGION)) {
+        if (props.onOpenCinema && nearRegion(humanPlayer.position, CINEMA_PORTAL_REGION)) {
           props.onOpenCinema();
           return;
         }
@@ -210,6 +233,56 @@ export const PixiGame = (props: {
     props.onOpenCinema,
     props.onOpenGarden,
     props.setSelectedElement,
+  ]);
+
+  useEffect(() => {
+    if (!humanPlayerId) {
+      previousPortalPositionRef.current = null;
+      return;
+    }
+    const humanPlayer = props.game.world.players.get(humanPlayerId);
+    if (!humanPlayer) {
+      previousPortalPositionRef.current = null;
+      return;
+    }
+
+    const currentPosition = tilePosition(humanPlayer.position);
+    const currentKey = positionKey(currentPosition);
+    const previousKey = previousPortalPositionRef.current;
+    previousPortalPositionRef.current = currentKey;
+    if (!previousKey || previousKey === currentKey) {
+      return;
+    }
+
+    const [previousX, previousY] = previousKey.split(':').map(Number);
+    const previousPosition = { x: previousX, y: previousY };
+    const portals = [
+      {
+        open: props.onOpenArtStudio,
+        region: ART_STUDIO_PORTAL_REGION,
+      },
+      {
+        open: props.onOpenGarden,
+        region: GARDEN_PORTAL_REGION,
+      },
+      {
+        open: props.onOpenCinema,
+        region: CINEMA_PORTAL_REGION,
+      },
+    ];
+    const portal = portals.find(
+      (candidate) =>
+        candidate.open &&
+        pointInRegion(currentPosition, candidate.region) &&
+        !pointInRegion(previousPosition, candidate.region),
+    );
+    portal?.open?.();
+  }, [
+    humanPlayerId,
+    props.game.world.players,
+    props.onOpenArtStudio,
+    props.onOpenCinema,
+    props.onOpenGarden,
   ]);
 
   // Zoom on the user’s avatar when it is created

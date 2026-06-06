@@ -12,6 +12,10 @@ export const GENTLE_TILES = {
   fieldTopRight: 748,
   fieldBottomLeft: 792,
   fieldBottomRight: 793,
+  pathTopLeft: 747,
+  pathTopRight: 748,
+  pathBottomLeft: 792,
+  pathBottomRight: 793,
   tentTopLeft: 751,
   tentTop: 752,
   tentTopRight: 753,
@@ -32,6 +36,11 @@ export const GENTLE_TILES = {
   mushroom: 850,
   post: 944,
 } as const;
+
+export const GENTLE_PATH_PATCH = [
+  [GENTLE_TILES.pathTopLeft, GENTLE_TILES.pathTopRight],
+  [GENTLE_TILES.pathBottomLeft, GENTLE_TILES.pathBottomRight],
+];
 
 function gentleTexture(frame: number) {
   const cached = textureCache.get(frame);
@@ -81,4 +90,13 @@ export function addGentleTileGrid(
       addGentleTile(container, frame, tileDim, tileX + x, tileY + y);
     });
   });
+}
+
+export function addGentlePathPatch(
+  container: PIXI.Container,
+  tileDim: number,
+  tileX: number,
+  tileY: number,
+) {
+  addGentleTileGrid(container, GENTLE_PATH_PATCH, tileDim, tileX, tileY);
 }
