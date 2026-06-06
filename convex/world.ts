@@ -1,6 +1,6 @@
 import { ConvexError, v } from 'convex/values';
 import { internalMutation, mutation, query } from './_generated/server';
-import { characters } from '../data/characters';
+import { characters, selectCharacterNameFromSeed } from '../data/characters';
 import { insertInput } from './aiTown/insertInput';
 import {
   DEFAULT_NAME,
@@ -11,8 +11,9 @@ import {
 import { playerId } from './aiTown/ids';
 import { kickEngine, startEngine, stopEngine } from './aiTown/main';
 import { engineInsertInput } from './engine/abstractGame';
-import type { DatabaseReader } from './_generated/server';
+import type { DatabaseReader, DatabaseWriter } from './_generated/server';
 import type { Doc, Id } from './_generated/dataModel';
+import type { Point, Vector } from './util/types';
 
 export const NPC_NAME_MAX_LENGTH = 16;
 export const NPC_IDENTITY_MAX_LENGTH = 500;
@@ -175,11 +176,19 @@ export function buildSessionToken(sessionId: string) {
 }
 
 export function selectSessionCharacter(sessionId: string) {
-  let hash = 0;
-  for (let i = 0; i < sessionId.length; i += 1) {
-    hash = (hash * 31 + sessionId.charCodeAt(i)) >>> 0;
+  return selectCharacterNameFromSeed(sessionId);
+}
+
+export function sanitizePlayerCharacter(character: string | undefined, sessionId: string) {
+  const fallback = selectSessionCharacter(sessionId);
+  if (!character) {
+    return fallback;
   }
-  return characters[hash % characters.length].name;
+  const trimmed = character.trim();
+  if (!characters.some((candidate) => candidate.name === trimmed)) {
+    return fallback;
+  }
+  return trimmed;
 }
 
 export type NpcProfileInput = {
@@ -447,6 +456,76 @@ async function findGardener(db: DatabaseReader, worldId: Id<'worlds'>, gardenerP
     .unique();
 }
 
+async function findResidentProfile(
+  db: DatabaseReader,
+  worldId: Id<'worlds'>,
+  tokenIdentifier: string,
+) {
+  return await db
+    .query('residentProfiles')
+    .withIndex('worldToken', (q) =>
+      q.eq('worldId', worldId).eq('tokenIdentifier', tokenIdentifier),
+    )
+    .unique();
+}
+
+async function upsertResidentProfile(
+  db: DatabaseWriter,
+  worldId: Id<'worlds'>,
+  tokenIdentifier: string,
+  sessionId: string,
+  name: string,
+  character: string,
+  updates: {
+    savedPosition?: Point;
+    savedFacing?: Vector;
+    lastSavedAt?: number;
+    daysSlept?: number;
+  } = {},
+) {
+  const now = Date.now();
+  const existing = await findResidentProfile(db, worldId, tokenIdentifier);
+  if (existing) {
+    const next = {
+      ...existing,
+      sessionId,
+      name,
+      character,
+      updatedAt: now,
+    };
+    if (updates.savedPosition !== undefined) {
+      next.savedPosition = updates.savedPosition;
+    }
+    if (updates.savedFacing !== undefined) {
+      next.savedFacing = updates.savedFacing;
+    }
+    if (updates.lastSavedAt !== undefined) {
+      next.lastSavedAt = updates.lastSavedAt;
+    }
+    if (updates.daysSlept !== undefined) {
+      next.daysSlept = updates.daysSlept;
+    }
+    await db.replace(existing._id, next);
+    return next;
+  }
+
+  const profile = {
+    worldId,
+    tokenIdentifier,
+    sessionId,
+    name,
+    character,
+    savedPosition: updates.savedPosition,
+    savedFacing: updates.savedFacing,
+    lastSavedAt: updates.lastSavedAt,
+    daysSlept: updates.daysSlept ?? 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.insert('residentProfiles', profile);
+  return profile;
+}
+
 async function getPlayerDisplayName(
   db: DatabaseReader,
   worldId: Id<'worlds'>,
@@ -575,6 +654,7 @@ export const joinWorld = mutation({
     worldId: v.id('worlds'),
     sessionId: v.string(),
     name: v.optional(v.string()),
+    character: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // const identity = await ctx.auth.getUserIdentity();
@@ -585,6 +665,7 @@ export const joinWorld = mutation({
     //   identity.givenName || identity.nickname || (identity.email && identity.email.split('@')[0]);
     const tokenIdentifier = buildSessionToken(args.sessionId);
     const name = sanitizePlayerName(args.name ?? DEFAULT_NAME);
+    const character = sanitizePlayerCharacter(args.character, args.sessionId);
 
     // if (!name) {
     //   throw new ConvexError(`Missing name on ${JSON.stringify(identity)}`);
@@ -593,13 +674,24 @@ export const joinWorld = mutation({
     if (!world) {
       throw new ConvexError(`Invalid world ID: ${args.worldId}`);
     }
+    const profile = await findResidentProfile(ctx.db, world._id, tokenIdentifier);
+    await upsertResidentProfile(
+      ctx.db,
+      world._id,
+      tokenIdentifier,
+      args.sessionId,
+      name,
+      character,
+    );
     // const { tokenIdentifier } = identity;
     return await insertInput(ctx, world._id, 'join', {
       name,
-      character: selectSessionCharacter(args.sessionId),
+      character,
       description: `${name} 是一名真人玩家，会在溪山镇、画室和小菜园里操作自己的角色。`,
       // description: `${identity.givenName} is a human player`,
       tokenIdentifier,
+      spawnPosition: profile?.savedPosition,
+      spawnFacing: profile?.savedFacing,
     });
   },
 });
@@ -625,8 +717,65 @@ export const leaveWorld = mutation({
     if (!existingPlayer) {
       return;
     }
+    const playerDescription = await ctx.db
+      .query('playerDescriptions')
+      .withIndex('worldId', (q) => q.eq('worldId', world._id).eq('playerId', existingPlayer.id))
+      .unique();
+    await upsertResidentProfile(
+      ctx.db,
+      world._id,
+      tokenIdentifier,
+      args.sessionId,
+      playerDescription?.name ?? DEFAULT_NAME,
+      sanitizePlayerCharacter(playerDescription?.character, args.sessionId),
+      {
+        savedPosition: existingPlayer.position,
+        savedFacing: existingPlayer.facing,
+      },
+    );
     await insertInput(ctx, world._id, 'leave', {
       playerId: existingPlayer.id,
+    });
+  },
+});
+
+export const sleepAndSaveResident = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    sessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    const tokenIdentifier = buildSessionToken(args.sessionId);
+    const player = world.players.find((candidate) => candidate.human === tokenIdentifier);
+    if (!player) {
+      throw new Error('先点击「互动」进入小镇，再睡觉存档。');
+    }
+    const playerDescription = await ctx.db
+      .query('playerDescriptions')
+      .withIndex('worldId', (q) => q.eq('worldId', world._id).eq('playerId', player.id))
+      .unique();
+    const existingProfile = await findResidentProfile(ctx.db, world._id, tokenIdentifier);
+    const now = Date.now();
+    await upsertResidentProfile(
+      ctx.db,
+      world._id,
+      tokenIdentifier,
+      args.sessionId,
+      playerDescription?.name ?? DEFAULT_NAME,
+      sanitizePlayerCharacter(playerDescription?.character, args.sessionId),
+      {
+        savedPosition: player.position,
+        savedFacing: player.facing,
+        lastSavedAt: now,
+        daysSlept: (existingProfile?.daysSlept ?? 0) + 1,
+      },
+    );
+    return await insertInput(ctx, world._id, 'sleep', {
+      playerId: player.id,
     });
   },
 });
@@ -663,6 +812,7 @@ export const residentStatus = query({
     }
 
     const tokenIdentifier = buildSessionToken(args.sessionId);
+    const profile = await findResidentProfile(ctx.db, args.worldId, tokenIdentifier);
     const player = world.players.find((candidate) => candidate.human === tokenIdentifier);
     const playerDescription = player
       ? await ctx.db
@@ -689,11 +839,18 @@ export const residentStatus = query({
 
     return {
       joined: player !== undefined,
+      profile: {
+        name: profile?.name ?? DEFAULT_NAME,
+        character: profile?.character ?? selectSessionCharacter(args.sessionId),
+        savedPosition: profile?.savedPosition,
+        lastSavedAt: profile?.lastSavedAt,
+        daysSlept: profile?.daysSlept ?? 0,
+      },
       player: player
         ? {
             id: player.id,
             name: playerDescription?.name ?? DEFAULT_NAME,
-            character: playerDescription?.character,
+            character: playerDescription?.character ?? profile?.character,
             position: player.position,
             activity: player.activity,
             lastInput: player.lastInput,

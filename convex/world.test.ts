@@ -14,6 +14,7 @@ import {
   plantGardenPlot,
   previewArtStudioJobs,
   sanitizeNpcProfile,
+  sanitizePlayerCharacter,
   sanitizePlayerName,
   selectSessionCharacter,
   settleArtStudioShift,
@@ -107,6 +108,12 @@ describe('session player identity helpers', () => {
 
   test('selects a deterministic character per session', () => {
     expect(selectSessionCharacter('friend-a')).toBe(selectSessionCharacter('friend-a'));
+  });
+
+  test('sanitizes player character choices with a deterministic fallback', () => {
+    expect(sanitizePlayerCharacter(' f6 ', 'friend-a')).toBe('f6');
+    expect(sanitizePlayerCharacter('f99', 'friend-a')).toBe(selectSessionCharacter('friend-a'));
+    expect(sanitizePlayerCharacter(undefined, 'friend-a')).toBe(selectSessionCharacter('friend-a'));
   });
 });
 

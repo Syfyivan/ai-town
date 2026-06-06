@@ -1,5 +1,5 @@
 import { Infer, ObjectType, v } from 'convex/values';
-import { Point, Vector, path, point, vector } from '../util/types';
+import { Path, Point, Vector, path, point, vector } from '../util/types';
 import { GameId, parseGameId } from './ids';
 import { playerId } from './ids';
 import {
@@ -143,7 +143,7 @@ export class Player {
 
     // Compute a candidate new position and check if it collides
     // with anything.
-    const candidate = pathPosition(this.pathfinding.state.path as any, now);
+    const candidate = pathPosition(this.pathfinding.state.path as Path, now);
     if (!candidate) {
       console.warn(`Path out of range of ${now} for ${this.id}`);
       return;
@@ -172,6 +172,8 @@ export class Player {
     character: string,
     description: string,
     tokenIdentifier?: string,
+    spawnPosition?: Point,
+    spawnFacing?: Vector,
   ) {
     if (tokenIdentifier) {
       let numHumans = 0;
@@ -187,17 +189,19 @@ export class Player {
         throw new Error(`Only ${MAX_HUMAN_PLAYERS} human players allowed at once.`);
       }
     }
-    let position;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const candidate = {
-        x: Math.floor(Math.random() * game.worldMap.width),
-        y: Math.floor(Math.random() * game.worldMap.height),
-      };
-      if (blocked(game, now, candidate)) {
-        continue;
+    let position = spawnPosition && !blocked(game, now, spawnPosition) ? spawnPosition : undefined;
+    if (!position) {
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const candidate = {
+          x: Math.floor(Math.random() * game.worldMap.width),
+          y: Math.floor(Math.random() * game.worldMap.height),
+        };
+        if (blocked(game, now, candidate)) {
+          continue;
+        }
+        position = candidate;
+        break;
       }
-      position = candidate;
-      break;
     }
     if (!position) {
       throw new Error(`Failed to find a free position!`);
@@ -208,7 +212,7 @@ export class Player {
       { dx: 0, dy: 1 },
       { dx: 0, dy: -1 },
     ];
-    const facing = facingOptions[Math.floor(Math.random() * facingOptions.length)];
+    const facing = spawnFacing ?? facingOptions[Math.floor(Math.random() * facingOptions.length)];
     if (!characters.find((c) => c.name === character)) {
       throw new Error(`Invalid character: ${character}`);
     }
@@ -270,9 +274,38 @@ export const playerInputs = {
       character: v.string(),
       description: v.string(),
       tokenIdentifier: v.optional(v.string()),
+      spawnPosition: v.optional(point),
+      spawnFacing: v.optional(vector),
     },
     handler: (game, now, args) => {
-      Player.join(game, now, args.name, args.character, args.description, args.tokenIdentifier);
+      Player.join(
+        game,
+        now,
+        args.name,
+        args.character,
+        args.description,
+        args.tokenIdentifier,
+        args.spawnPosition,
+        args.spawnFacing,
+      );
+      return null;
+    },
+  }),
+  sleep: inputHandler({
+    args: { playerId },
+    handler: (game, now, args) => {
+      const playerId = parseGameId('players', args.playerId);
+      const player = game.world.players.get(playerId);
+      if (!player) {
+        throw new Error(`Invalid player ID ${playerId}`);
+      }
+      stopPlayer(player);
+      player.lastInput = now;
+      player.activity = {
+        description: '在居民家睡觉存档',
+        emoji: '💤',
+        until: now + 20_000,
+      };
       return null;
     },
   }),

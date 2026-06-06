@@ -4,6 +4,7 @@ import { agentTables } from './agent/schema';
 import { aiTownTables } from './aiTown/schema';
 import { conversationId, playerId } from './aiTown/ids';
 import { engineTables } from './engine/schema';
+import { point, vector } from './util/types';
 
 export default defineSchema({
   music: defineTable({
@@ -98,6 +99,22 @@ export default defineSchema({
   })
     .index('worldId', ['worldId'])
     .index('worldPlayer', ['worldId', 'playerId']),
+
+  residentProfiles: defineTable({
+    worldId: v.id('worlds'),
+    tokenIdentifier: v.string(),
+    sessionId: v.string(),
+    name: v.string(),
+    character: v.string(),
+    savedPosition: v.optional(point),
+    savedFacing: v.optional(vector),
+    lastSavedAt: v.optional(v.number()),
+    daysSlept: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('worldId', ['worldId'])
+    .index('worldToken', ['worldId', 'tokenIdentifier']),
 
   ...agentTables,
   ...aiTownTables,

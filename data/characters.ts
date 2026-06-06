@@ -49,53 +49,100 @@ export const Descriptions = [
 export const characters = [
   {
     name: 'f1',
+    label: '蓝帽旅人',
+    hair: '浅灰发',
+    outfit: '蓝色外套',
     textureUrl: '/ai-town/assets/32x32folk.png',
     spritesheetData: f1SpritesheetData,
     speed: 0.1,
   },
   {
     name: 'f2',
+    label: '墨绿学徒',
+    hair: '黑短发',
+    outfit: '墨绿外套',
     textureUrl: '/ai-town/assets/32x32folk.png',
     spritesheetData: f2SpritesheetData,
     speed: 0.1,
   },
   {
     name: 'f3',
+    label: '灰袍画师',
+    hair: '黑长发',
+    outfit: '灰色长袍',
     textureUrl: '/ai-town/assets/32x32folk.png',
     spritesheetData: f3SpritesheetData,
     speed: 0.1,
   },
   {
     name: 'f4',
+    label: '白发匠人',
+    hair: '白发',
+    outfit: '深色工装',
     textureUrl: '/ai-town/assets/32x32folk.png',
     spritesheetData: f4SpritesheetData,
     speed: 0.1,
   },
   {
     name: 'f5',
+    label: '金发农手',
+    hair: '金发',
+    outfit: '蓝色衣装',
     textureUrl: '/ai-town/assets/32x32folk.png',
     spritesheetData: f5SpritesheetData,
     speed: 0.1,
   },
   {
     name: 'f6',
+    label: '粉发织梦者',
+    hair: '粉发',
+    outfit: '紫色衣装',
     textureUrl: '/ai-town/assets/32x32folk.png',
     spritesheetData: f6SpritesheetData,
     speed: 0.1,
   },
   {
     name: 'f7',
+    label: '茶发店员',
+    hair: '茶棕发',
+    outfit: '米色衣装',
     textureUrl: '/ai-town/assets/32x32folk.png',
     spritesheetData: f7SpritesheetData,
     speed: 0.1,
   },
   {
     name: 'f8',
+    label: '浅金策展人',
+    hair: '浅金长发',
+    outfit: '灰绿衣装',
     textureUrl: '/ai-town/assets/32x32folk.png',
     spritesheetData: f8SpritesheetData,
     speed: 0.1,
   },
 ];
+
+export const characterAppearanceOptions = characters.map(({ name, label, hair, outfit }) => ({
+  name,
+  label,
+  hair,
+  outfit,
+}));
+
+export function getCharacterAppearance(characterName: string) {
+  return characters.find((character) => character.name === characterName);
+}
+
+export function selectCharacterNameFromSeed(seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return characters[hash % characters.length].name;
+}
+
+export function randomCharacterName() {
+  return characters[Math.floor(Math.random() * characters.length)].name;
+}
 
 // Characters move at 0.75 tiles per second.
 export const movementSpeed = 0.75;

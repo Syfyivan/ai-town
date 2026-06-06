@@ -36,6 +36,7 @@ export default function InteractButton() {
           worldId,
           sessionId: identity.sessionId,
           name: identity.playerName,
+          character: identity.playerCharacter,
         });
       } catch (e: unknown) {
         if (e instanceof ConvexError) {
@@ -50,7 +51,7 @@ export default function InteractButton() {
         toast.error(e instanceof Error ? e.message : String(e));
       }
     },
-    [convex, identity.playerName, identity.sessionId, join],
+    [convex, identity.playerCharacter, identity.playerName, identity.sessionId, join],
   );
 
   const joinOrLeaveGame = () => {

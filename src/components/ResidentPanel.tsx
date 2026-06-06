@@ -1,7 +1,12 @@
-import { useQuery } from 'convex/react';
+import { useConvex, useMutation, useQuery } from 'convex/react';
+import { useState } from 'react';
+import { toast } from 'react-toastify';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
+import { characterAppearanceOptions } from '../../data/characters';
+import { waitForInput } from '../hooks/sendInput';
 import { useSessionIdentity } from '../hooks/useSessionIdentity';
+import AvatarPreview from './AvatarPreview';
 
 function formatProgress(progress?: number) {
   if (progress === undefined) {
@@ -10,8 +15,23 @@ function formatProgress(progress?: number) {
   return `${Math.floor(progress * 100)}%`;
 }
 
+function formatSavedAt(savedAt?: number) {
+  if (!savedAt) {
+    return '还没有睡觉存档';
+  }
+  return new Date(savedAt).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
   const identity = useSessionIdentity();
+  const convex = useConvex();
+  const sleepAndSave = useMutation(api.world.sleepAndSaveResident);
+  const [saving, setSaving] = useState(false);
   const status = useQuery(api.world.residentStatus, {
     worldId,
     sessionId: identity.sessionId,
@@ -29,6 +49,25 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
   const assets = status.assets;
   const activeShift = status.studio.activeShift;
   const activity = status.player?.activity;
+  const displayCharacter =
+    status.player?.character ?? status.profile?.character ?? identity.playerCharacter;
+  const canSleepAndSave = status.joined && !!status.player && !saving;
+
+  const sleepAndSaveProfile = async () => {
+    if (!canSleepAndSave) {
+      return;
+    }
+    setSaving(true);
+    try {
+      const inputId = await sleepAndSave({ worldId, sessionId: identity.sessionId });
+      await waitForInput(convex, inputId);
+      toast.success('已睡觉并保存居民档案');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="resident-panel">
@@ -48,6 +87,40 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
             ? '你已经住进溪山镇，可以移动、聊天、打工和种菜。'
             : '点击底部「互动」进入小镇，成为这里的一名居民。'}
         </p>
+      </section>
+
+      <section className="resident-card mt-4">
+        <p className="text-sm text-[#ead4aa]">外观</p>
+        <div className="mt-3">
+          <AvatarPreview character={displayCharacter} />
+        </div>
+        {!status.joined && (
+          <div className="appearance-controls">
+            <select
+              className="appearance-select"
+              value={identity.playerCharacter}
+              onChange={(event) => identity.setPlayerCharacter(event.target.value)}
+            >
+              {characterAppearanceOptions.map((appearance) => (
+                <option key={appearance.name} value={appearance.name}>
+                  {appearance.label} - {appearance.hair} / {appearance.outfit}
+                </option>
+              ))}
+            </select>
+            <button
+              className="observatory-control"
+              type="button"
+              onClick={identity.randomizePlayerCharacter}
+            >
+              随机
+            </button>
+          </div>
+        )}
+        {status.joined && (
+          <p className="mt-3 text-sm leading-tight text-[#ead4aa]">
+            已进入小镇。本次外观会保存在居民档案里，重新入住时继续使用。
+          </p>
+        )}
       </section>
 
       <section className="mt-4 grid grid-cols-2 gap-3">
@@ -99,7 +172,16 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
                 ? '自由活动'
                 : '未进入小镇'}
           </p>
+          <p>存档：{formatSavedAt(status.profile?.lastSavedAt)}</p>
         </div>
+        <button
+          className="observatory-control mt-4"
+          disabled={!canSleepAndSave}
+          type="button"
+          onClick={() => void sleepAndSaveProfile()}
+        >
+          {saving ? '保存中...' : '睡觉存档'}
+        </button>
       </section>
 
       <section className="resident-card mt-4">

@@ -461,6 +461,51 @@ p[contenteditable='true']:empty::before {
   margin-top: 0.35rem;
 }
 
+.avatar-preview {
+  align-items: center;
+  display: flex;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.avatar-preview-sprite {
+  border: 4px solid #181425;
+  background-color: #dff6f5;
+  box-shadow: inset 0 -10px 0 rgba(24, 20, 37, 0.12);
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.avatar-preview-name {
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.avatar-preview-meta {
+  color: #ead4aa;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  margin-top: 0.25rem;
+}
+
+.appearance-controls {
+  align-items: center;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 0.85rem;
+}
+
+.appearance-select {
+  min-height: 44px;
+  border: 3px solid #181425;
+  background: #fffaf1;
+  color: #181425;
+  padding: 0.35rem 0.6rem;
+}
+
 @media (max-width: 900px) {
   .garden-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -492,6 +537,16 @@ p[contenteditable='true']:empty::before {
 
 .npc-field textarea {
   resize: vertical;
+}
+
+.npc-appearance-card {
+  align-items: center;
+  border: 4px solid #181425;
+  background: rgba(24, 20, 37, 0.46);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem;
 }
 
 @keyframes cinemaLoading {

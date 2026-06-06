@@ -3,14 +3,14 @@ import { FormEvent, useMemo, useState } from 'react';
 import ReactModal from 'react-modal';
 import { toast } from 'react-toastify';
 import { api } from '../../convex/_generated/api';
+import { characterAppearanceOptions, randomCharacterName } from '../../data/characters';
 import { waitForInput } from '../hooks/sendInput';
+import AvatarPreview from './AvatarPreview';
 
 type Props = {
   open: boolean;
   onClose: () => void;
 };
-
-const CHARACTER_OPTIONS = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8'];
 
 const INITIAL_FORM = {
   name: '陆青',
@@ -40,6 +40,10 @@ export default function NpcManagerModal({ open, onClose }: Props) {
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const randomizeAppearance = () => {
+    setForm((current) => ({ ...current, character: randomCharacterName() }));
   };
 
   const submit = async (event: FormEvent) => {
@@ -102,13 +106,24 @@ export default function NpcManagerModal({ open, onClose }: Props) {
               value={form.character}
               onChange={(event) => updateField('character', event.target.value)}
             >
-              {CHARACTER_OPTIONS.map((character) => (
-                <option key={character} value={character}>
-                  {character}
+              {characterAppearanceOptions.map((appearance) => (
+                <option key={appearance.name} value={appearance.name}>
+                  {appearance.label} - {appearance.hair} / {appearance.outfit}
                 </option>
               ))}
             </select>
           </label>
+
+          <div className="npc-appearance-card md:col-span-2">
+            <AvatarPreview character={form.character} />
+            <button
+              className="observatory-control"
+              type="button"
+              onClick={randomizeAppearance}
+            >
+              随机
+            </button>
+          </div>
 
           <label className="npc-field md:col-span-2">
             <span>人设</span>
