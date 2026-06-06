@@ -387,6 +387,23 @@ export function previewGardenCrops() {
   }));
 }
 
+export function summarizeResidentAssets(
+  worker?: StudioWorkerStats,
+  gardener?: GardenerStats,
+) {
+  return {
+    florins: worker?.florins ?? 0,
+    coins: gardener?.coins ?? 0,
+    vegetables: gardener?.vegetables ?? 0,
+    paintingSkill: worker?.paintingSkill ?? INITIAL_STUDIO_WORKER.paintingSkill,
+    creativity: worker?.creativity ?? INITIAL_STUDIO_WORKER.creativity,
+    reputation: worker?.reputation ?? INITIAL_STUDIO_WORKER.reputation,
+    gardeningSkill: gardener?.gardeningSkill ?? INITIAL_GARDENER_STATS.gardeningSkill,
+    shiftsCompleted: worker?.shiftsCompleted ?? 0,
+    harvestsCompleted: gardener?.harvestsCompleted ?? 0,
+  };
+}
+
 function artStudioStatsFromWorker(worker?: Doc<'artStudioWorkers'>): StudioWorkerStats {
   if (!worker) {
     return INITIAL_STUDIO_WORKER;
@@ -631,6 +648,75 @@ export const addNpc = mutation({
     return await insertInput(ctx, world._id, 'createAgent', {
       description: profile,
     });
+  },
+});
+
+export const residentStatus = query({
+  args: {
+    worldId: v.id('worlds'),
+    sessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+
+    const tokenIdentifier = buildSessionToken(args.sessionId);
+    const player = world.players.find((candidate) => candidate.human === tokenIdentifier);
+    const playerDescription = player
+      ? await ctx.db
+          .query('playerDescriptions')
+          .withIndex('worldId', (q) => q.eq('worldId', args.worldId).eq('playerId', player.id))
+          .unique()
+      : undefined;
+    const worker = player ? await findArtStudioWorker(ctx.db, args.worldId, player.id) : undefined;
+    const gardener = player ? await findGardener(ctx.db, args.worldId, player.id) : undefined;
+    const workerStats = artStudioStatsFromWorker(worker ?? undefined);
+    const gardenerStats = gardenerStatsFromRecord(gardener ?? undefined);
+    const now = Date.now();
+    const gardenPlots = ensureGardenPlots(gardener?.plots).map((plot) => ({
+      slot: plot.slot,
+      crop: plot.crop,
+      phase: getGardenPlotPhase(now, plot),
+      readyAt: plot.readyAt,
+      cropName: plot.crop ? GARDEN_CROP_CONFIG[plot.crop].name : undefined,
+    }));
+    const readyPlots = gardenPlots.filter((plot) => plot.phase === 'ready').length;
+    const growingPlots = gardenPlots.filter(
+      (plot) => plot.phase === 'planted' || plot.phase === 'watered',
+    ).length;
+
+    return {
+      joined: player !== undefined,
+      player: player
+        ? {
+            id: player.id,
+            name: playerDescription?.name ?? DEFAULT_NAME,
+            character: playerDescription?.character,
+            position: player.position,
+            activity: player.activity,
+            lastInput: player.lastInput,
+          }
+        : undefined,
+      assets: summarizeResidentAssets(workerStats, gardenerStats),
+      studio: {
+        activeShift: worker?.activeShift
+          ? {
+              title: worker.activeShift.title,
+              progress: getStudioShiftProgress(now, worker.activeShift),
+              readyToFinish: now >= worker.activeShift.endsAt,
+              endsAt: worker.activeShift.endsAt,
+            }
+          : undefined,
+      },
+      garden: {
+        readyPlots,
+        growingPlots,
+        emptyPlots: gardenPlots.filter((plot) => plot.phase === 'empty').length,
+        plots: gardenPlots,
+      },
+    };
   },
 });
 

@@ -17,6 +17,7 @@ import {
   sanitizePlayerName,
   selectSessionCharacter,
   settleArtStudioShift,
+  summarizeResidentAssets,
   waterGardenPlot,
 } from './world';
 
@@ -212,5 +213,49 @@ describe('garden plot helpers', () => {
       harvestsCompleted: 1,
     });
     expect(outcome.plots[2]).toEqual({ slot: 2 });
+  });
+});
+
+describe('resident asset summary', () => {
+  test('uses MVP defaults before a resident has worked', () => {
+    expect(summarizeResidentAssets()).toEqual({
+      florins: 0,
+      coins: 0,
+      vegetables: 0,
+      paintingSkill: 1,
+      creativity: 1,
+      reputation: 0,
+      gardeningSkill: 1,
+      shiftsCompleted: 0,
+      harvestsCompleted: 0,
+    });
+  });
+
+  test('combines studio and garden progress', () => {
+    expect(
+      summarizeResidentAssets(
+        {
+          florins: 22,
+          paintingSkill: 2.5,
+          creativity: 3,
+          reputation: 1,
+          shiftsCompleted: 1,
+        },
+        {
+          coins: 14,
+          vegetables: 2,
+          gardeningSkill: 1.7,
+          harvestsCompleted: 1,
+        },
+      ),
+    ).toMatchObject({
+      florins: 22,
+      coins: 14,
+      vegetables: 2,
+      paintingSkill: 2.5,
+      gardeningSkill: 1.7,
+      shiftsCompleted: 1,
+      harvestsCompleted: 1,
+    });
   });
 });

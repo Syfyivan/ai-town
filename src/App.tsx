@@ -50,11 +50,11 @@ export default function Home() {
       >
         <div className="font-body">
           <h1 className="text-center text-6xl font-bold font-display game-title">帮助</h1>
-          <p>欢迎来到溪山镇。这里既可以作为旁观者观察智能体生活，也可以加入小镇和他们直接对话。</p>
-          <h2 className="text-4xl mt-4">观察</h2>
+          <p>欢迎来到溪山镇。你可以作为居民住进小镇，移动、聊天、打工、种菜，也能顺手观察 AI 镇民的日常。</p>
+          <h2 className="text-4xl mt-4">生活</h2>
+          <p>点击互动按钮后，你会以自己的居民身份进入地图。右侧默认显示你的钱包、背包、能力和当前进度。</p>
+          <h2 className="text-4xl mt-4">镇民</h2>
           <p>拖拽地图可以移动视角，滚轮可以缩放。点击任意角色，可以查看他的介绍和最近对话。</p>
-          <h2 className="text-4xl mt-4">互动</h2>
-          <p>点击互动按钮后，你会以“访客”身份进入地图。选择一个角色后，可以邀请对方聊天。</p>
           <p className="text-2xl mt-2">操作</p>
           <p className="mt-4">点击地图可以移动你的角色。</p>
           <p className="mt-4">

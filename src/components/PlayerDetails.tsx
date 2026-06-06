@@ -9,6 +9,7 @@ import { useSendInput } from '../hooks/sendInput';
 import { GameId } from '../../convex/aiTown/ids';
 import { ServerGame } from '../hooks/serverGame';
 import { useSessionIdentity } from '../hooks/useSessionIdentity';
+import ResidentPanel from './ResidentPanel';
 
 export default function PlayerDetails({
   worldId,
@@ -58,11 +59,7 @@ export default function PlayerDetails({
   const leaveConversation = useSendInput(engineId, 'leaveConversation');
 
   if (!playerId) {
-    return (
-      <div className="h-full text-xl flex text-center items-center p-4">
-        点击地图上的角色，查看他的介绍、当前对话和最近聊天记录。
-      </div>
-    );
+    return <ResidentPanel worldId={worldId} />;
   }
   if (!player) {
     return null;
