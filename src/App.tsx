@@ -37,7 +37,7 @@ export default function Home() {
   const { isResident } = useResidentPresence();
   const townIsImmersive = scene === 'town' && isResident;
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-between font-body game-background">
+    <main className="town-root relative flex min-h-screen flex-col items-center justify-between font-body game-background">
       {!townIsImmersive && scene === 'town' && <PoweredByConvex />}
       <CinemaOverlay open={cinemaOpen} onClose={() => setCinemaOpen(false)} />
       <TownObservatory open={observatoryOpen} onClose={() => setObservatoryOpen(false)} />
