@@ -19,6 +19,8 @@ import { ART_STUDIO_PORTAL_REGION, ArtStudioHotspot } from './ArtStudioHotspot.t
 import { GARDEN_PORTAL_REGION, GardenHotspot } from './GardenHotspot.tsx';
 import { useSessionIdentity } from '../hooks/useSessionIdentity.ts';
 import { Point } from '../../convex/util/types.ts';
+import { usePlayerSettings } from '../hooks/usePlayerSettings.ts';
+import { MailboxLayer } from './MailboxLayer.tsx';
 
 type TileRegion = { x: number; y: number; width: number; height: number };
 
@@ -58,6 +60,7 @@ export const PixiGame = (props: {
   const pixiApp = useApp();
   const viewportRef = useRef<Viewport | undefined>();
   const identity = useSessionIdentity();
+  const settings = usePlayerSettings();
 
   const humanTokenIdentifier =
     useQuery(api.world.userStatus, {
@@ -118,6 +121,7 @@ export const PixiGame = (props: {
   };
   const { width, height, tileDim } = props.game.worldMap;
   const players = [...props.game.world.players.values()];
+  const mailboxCount = players.filter((player) => !player.human).length;
 
   useEffect(() => {
     const isTextInput = (target: EventTarget | null) => {
@@ -185,7 +189,8 @@ export const PixiGame = (props: {
       if (movement[key]) {
         event.preventDefault();
         const now = Date.now();
-        if (now - lastKeyboardMoveAt.current < 140) {
+        const keyboardMoveDelay = settings.movementMode === 'run' ? 95 : 180;
+        if (now - lastKeyboardMoveAt.current < keyboardMoveDelay) {
           return;
         }
         lastKeyboardMoveAt.current = now;
@@ -233,6 +238,7 @@ export const PixiGame = (props: {
     props.onOpenCinema,
     props.onOpenGarden,
     props.setSelectedElement,
+    settings.movementMode,
   ]);
 
   useEffect(() => {
@@ -310,6 +316,7 @@ export const PixiGame = (props: {
         onpointerup={onMapPointerUp}
         onpointerdown={onMapPointerDown}
       />
+      <MailboxLayer count={mailboxCount} tileDim={tileDim} />
       {props.onOpenCinema && <CinemaHotspot tileDim={tileDim} onOpenCinema={props.onOpenCinema} />}
       {props.onOpenArtStudio && (
         <ArtStudioHotspot tileDim={tileDim} onOpenArtStudio={props.onOpenArtStudio} />

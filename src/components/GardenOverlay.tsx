@@ -7,7 +7,7 @@ import { useSessionIdentity } from '../hooks/useSessionIdentity';
 import AvatarPreview from './AvatarPreview';
 
 type GardenCropId = 'radish' | 'greens' | 'carrot';
-type GardenAction = 'plant' | 'water' | 'harvest';
+type GardenAction = 'plant' | 'water' | 'harvest' | 'saveSeeds';
 type GardenPosition = { x: number; y: number };
 
 const GARDEN_BOARD_WIDTH = 5;
@@ -55,6 +55,7 @@ export default function GardenOverlay(props: { open: boolean; onClose: () => voi
   const [gardenerPosition, setGardenerPosition] = useState<GardenPosition>({ x: 0, y: 3 });
   const [facing, setFacing] = useState<GardenPosition>({ x: 1, y: 0 });
   const [busyPlot, setBusyPlot] = useState<number>();
+  const [toolBusy, setToolBusy] = useState<string>();
   const [now, setNow] = useState(Date.now());
   const identity = useSessionIdentity();
   const worldStatus = useQuery(api.world.defaultWorldStatus);
@@ -84,6 +85,8 @@ export default function GardenOverlay(props: { open: boolean; onClose: () => voi
   const plantCrop = useMutation(api.world.plantGardenCrop);
   const waterCrop = useMutation(api.world.waterGardenCrop);
   const harvestCrop = useMutation(api.world.harvestGardenCrop);
+  const saveSeeds = useMutation(api.world.saveGardenSeeds);
+  const buySeedReplicator = useMutation(api.world.buySeedReplicator);
 
   const crops = status?.garden.crops ?? [];
   const cropById = useMemo(() => new Map(crops.map((crop) => [crop.crop, crop])), [crops]);
@@ -121,9 +124,16 @@ export default function GardenOverlay(props: { open: boolean; onClose: () => voi
         } else if (action === 'water') {
           await waterCrop({ worldId, playerId: humanPlayerId, slot });
           toast.success('浇水完成');
-        } else {
+        } else if (action === 'harvest') {
           const harvest = await harvestCrop({ worldId, playerId: humanPlayerId, slot });
           toast.success(`收获${harvest.cropName}，获得 ${harvest.coinReward} 铜币`);
+        } else {
+          const saving = await saveSeeds({ worldId, playerId: humanPlayerId, slot });
+          if (saving.success) {
+            toast.success(`留种成功，得到 ${saving.seedCount} 粒${saving.cropName}种子`);
+          } else {
+            toast.info(`这次${saving.cropName}留种失败了`);
+          }
         }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : String(error));
@@ -131,7 +141,7 @@ export default function GardenOverlay(props: { open: boolean; onClose: () => voi
         setBusyPlot(undefined);
       }
     },
-    [cropById, harvestCrop, humanPlayerId, plantCrop, selectedCrop, waterCrop, worldId],
+    [cropById, harvestCrop, humanPlayerId, plantCrop, saveSeeds, selectedCrop, waterCrop, worldId],
   );
 
   const runSelectedPlotAction = useCallback(() => {
@@ -213,6 +223,15 @@ export default function GardenOverlay(props: { open: boolean; onClose: () => voi
   }
 
   const selectedCropConfig = cropById.get(selectedCrop);
+  const selectedCropSeeds = selectedCropConfig?.seedsAvailable ?? 0;
+  const energy = gardener?.energy ?? 100;
+  const maxEnergy = 100;
+  const energyPercent = Math.floor((energy / maxEnergy) * 100);
+  const baseSeedSavingRate = Math.round((status?.garden.seedSaving.baseSuccessRate ?? 0.4) * 100);
+  const replicatorSeedSavingRate = Math.round(
+    (status?.garden.seedSaving.replicatorSuccessRate ?? 0.95) * 100,
+  );
+  const replicatorCost = status?.garden.seedSaving.seedReplicatorCost ?? 80;
   const gardenCells = Array.from(
     { length: GARDEN_BOARD_WIDTH * GARDEN_BOARD_HEIGHT },
     (_, index) => ({
@@ -336,6 +355,31 @@ export default function GardenOverlay(props: { open: boolean; onClose: () => voi
                 <span>收获</span>
                 <strong>{gardener?.harvestsCompleted ?? 0}</strong>
               </div>
+              <div className="garden-stat">
+                <span>能量</span>
+                <strong>
+                  {energy}/{maxEnergy}
+                </strong>
+              </div>
+              <div className="garden-stat">
+                <span>食物</span>
+                <strong>{gardener?.food ?? 1}</strong>
+              </div>
+              <div className="garden-stat">
+                <span>留种</span>
+                <strong>
+                  {gardener?.seedReplicator
+                    ? `${replicatorSeedSavingRate}%`
+                    : `${baseSeedSavingRate}%`}
+                </strong>
+              </div>
+              <div className="garden-stat">
+                <span>种子复制机</span>
+                <strong>{gardener?.seedReplicator ? '有' : '无'}</strong>
+              </div>
+            </div>
+            <div className="life-energy-bar mt-4">
+              <span style={{ width: `${energyPercent}%` }} />
             </div>
           </section>
 
@@ -347,7 +391,8 @@ export default function GardenOverlay(props: { open: boolean; onClose: () => voi
                   {selectedCropConfig?.name ?? '萝卜'}
                 </h3>
                 <p className="mt-1 text-sm leading-tight text-[#ead4aa]">
-                  {selectedCropConfig?.description ?? '适合新手的小菜园作物。'}
+                  {selectedCropConfig?.description ?? '适合新手的小菜园作物。'} 背包还有{' '}
+                  {selectedCropSeeds} 粒。
                 </p>
               </div>
               <select
@@ -358,29 +403,91 @@ export default function GardenOverlay(props: { open: boolean; onClose: () => voi
               >
                 {crops.map((crop) => (
                   <option key={crop.crop} value={crop.crop}>
-                    {crop.name} / {crop.growMs / 1000}s / {crop.coinReward} 铜币
+                    {crop.name} / {crop.seedsAvailable} 粒 / {crop.growMs / 1000}s
                   </option>
                 ))}
               </select>
             </div>
 
-            <button
-              className="observatory-control mt-4 w-full disabled:cursor-not-allowed disabled:opacity-50"
-              type="button"
-              disabled={
-                !humanPlayerId ||
-                !selectedPlot ||
-                busyPlot === selectedPlot.slot ||
-                selectedPlot.phase === 'watered'
-              }
-              onClick={() => runSelectedPlotAction()}
-            >
-              {selectedPlot?.phase === 'empty' && '播种'}
-              {selectedPlot?.phase === 'planted' && '浇水'}
-              {selectedPlot?.phase === 'watered' && '生长中'}
-              {selectedPlot?.phase === 'ready' && '收获'}
-              {!selectedPlot && '整理地块'}
-            </button>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <button
+                className="observatory-control w-full disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                disabled={
+                  !humanPlayerId ||
+                  !selectedPlot ||
+                  busyPlot === selectedPlot.slot ||
+                  selectedPlot.phase === 'watered' ||
+                  (selectedPlot.phase === 'empty' && selectedCropSeeds <= 0)
+                }
+                onClick={() => runSelectedPlotAction()}
+              >
+                {selectedPlot?.phase === 'empty' && '播种'}
+                {selectedPlot?.phase === 'planted' && '浇水'}
+                {selectedPlot?.phase === 'watered' && '生长中'}
+                {selectedPlot?.phase === 'ready' && '收获'}
+                {!selectedPlot && '整理地块'}
+              </button>
+              <button
+                className="observatory-control w-full disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                disabled={
+                  !humanPlayerId ||
+                  !selectedPlot ||
+                  busyPlot === selectedPlot.slot ||
+                  selectedPlot.phase !== 'ready'
+                }
+                onClick={() => {
+                  if (selectedPlot) {
+                    void runGardenAction(selectedPlot.slot, 'saveSeeds');
+                  }
+                }}
+              >
+                留种
+              </button>
+            </div>
+          </section>
+
+          <section className="scene-card mt-5">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+              <div>
+                <p className="text-sm text-[#ead4aa]">种子复制机</p>
+                <p className="mt-1 text-sm leading-tight text-white">
+                  普通留种成功率 {baseSeedSavingRate}%；装上复制机后成功率{' '}
+                  {replicatorSeedSavingRate}%。
+                </p>
+              </div>
+              <button
+                className="observatory-control disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!humanPlayerId || !!toolBusy || gardener?.seedReplicator}
+                type="button"
+                onClick={() => {
+                  if (!worldId || !humanPlayerId) {
+                    return;
+                  }
+                  void (async () => {
+                    setToolBusy('replicator');
+                    try {
+                      const result = await buySeedReplicator({
+                        worldId,
+                        playerId: humanPlayerId,
+                      });
+                      toast.success(
+                        result.alreadyOwned
+                          ? '已经有种子复制机了'
+                          : `买到种子复制机，花费 ${replicatorCost}`,
+                      );
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : String(error));
+                    } finally {
+                      setToolBusy(undefined);
+                    }
+                  })();
+                }}
+              >
+                {gardener?.seedReplicator ? '已拥有' : `${replicatorCost} 购买`}
+              </button>
+            </div>
           </section>
         </main>
 

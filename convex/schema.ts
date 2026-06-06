@@ -86,6 +86,16 @@ export default defineSchema({
     vegetables: v.number(),
     gardeningSkill: v.number(),
     harvestsCompleted: v.number(),
+    energy: v.optional(v.number()),
+    food: v.optional(v.number()),
+    seedReplicator: v.optional(v.boolean()),
+    seeds: v.optional(
+      v.object({
+        radish: v.number(),
+        greens: v.number(),
+        carrot: v.number(),
+      }),
+    ),
     lastTendedAt: v.optional(v.number()),
     plots: v.array(
       v.object({

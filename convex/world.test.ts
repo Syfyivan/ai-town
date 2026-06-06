@@ -1,18 +1,24 @@
 import {
   ART_STUDIO_SHIFT_DURATION_MS,
+  GARDEN_MAX_ENERGY,
   GARDEN_PLOT_COUNT,
+  GARDEN_STARTER_FOOD,
   NPC_IDENTITY_MAX_LENGTH,
   NPC_NAME_MAX_LENGTH,
   NPC_PLAN_MAX_LENGTH,
   PLAYER_NAME_MAX_LENGTH,
+  SEED_REPLICATOR_SUCCESS_RATE,
+  SEED_SAVE_SUCCESS_RATE,
   buildSessionToken,
   createArtStudioShift,
   createGardenPlots,
   getGardenPlotPhase,
   getStudioShiftProgress,
+  getTownCalendar,
   harvestGardenPlot,
   plantGardenPlot,
   previewArtStudioJobs,
+  resolveSeedSaving,
   sanitizeNpcProfile,
   sanitizePlayerCharacter,
   sanitizePlayerName,
@@ -175,12 +181,7 @@ describe('garden plot helpers', () => {
   };
 
   test('creates a fixed MVP plot grid', () => {
-    expect(createGardenPlots()).toEqual([
-      { slot: 0 },
-      { slot: 1 },
-      { slot: 2 },
-      { slot: 3 },
-    ]);
+    expect(createGardenPlots()).toEqual([{ slot: 0 }, { slot: 1 }, { slot: 2 }, { slot: 3 }]);
     expect(createGardenPlots()).toHaveLength(GARDEN_PLOT_COUNT);
   });
 
@@ -223,12 +224,60 @@ describe('garden plot helpers', () => {
   });
 });
 
+describe('town calendar and seed saving helpers', () => {
+  test('marks the monthly market day from sleep progress', () => {
+    const calendar = getTownCalendar(new Date('2026-06-06T09:30:00+08:00').getTime(), 14);
+    expect(calendar).toMatchObject({
+      dayNumber: 15,
+      month: 1,
+      dayOfMonth: 15,
+      isMarketDay: true,
+      daysUntilMarket: 0,
+    });
+
+    const nextDay = getTownCalendar(new Date('2026-06-06T09:30:00+08:00').getTime(), 15);
+    expect(nextDay).toMatchObject({
+      dayNumber: 16,
+      isMarketDay: false,
+      daysUntilMarket: 29,
+    });
+  });
+
+  test('uses the configured seed saving rates', () => {
+    const ordinary = resolveSeedSaving('seed-save-check', false);
+    const replicated = resolveSeedSaving('seed-save-check', true);
+
+    expect(ordinary.successRate).toBe(SEED_SAVE_SUCCESS_RATE);
+    expect(replicated.successRate).toBe(SEED_REPLICATOR_SUCCESS_RATE);
+    expect(ordinary.seedCount).toBeGreaterThanOrEqual(0);
+    expect(ordinary.seedCount).toBeLessThanOrEqual(5);
+    expect(replicated.seedCount).toBeGreaterThanOrEqual(0);
+    expect(replicated.seedCount).toBeLessThanOrEqual(5);
+    if (ordinary.success) {
+      expect(ordinary.seedCount).toBeGreaterThanOrEqual(1);
+    }
+    if (replicated.success) {
+      expect(replicated.seedCount).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
 describe('resident asset summary', () => {
   test('uses MVP defaults before a resident has worked', () => {
     expect(summarizeResidentAssets()).toEqual({
       florins: 0,
       coins: 0,
       vegetables: 0,
+      energy: GARDEN_MAX_ENERGY,
+      maxEnergy: GARDEN_MAX_ENERGY,
+      food: GARDEN_STARTER_FOOD,
+      seeds: {
+        radish: 4,
+        greens: 3,
+        carrot: 2,
+      },
+      totalSeeds: 9,
+      seedReplicator: false,
       paintingSkill: 1,
       creativity: 1,
       reputation: 0,
@@ -251,6 +300,14 @@ describe('resident asset summary', () => {
         {
           coins: 14,
           vegetables: 2,
+          energy: 72,
+          food: 3,
+          seeds: {
+            radish: 1,
+            greens: 0,
+            carrot: 4,
+          },
+          seedReplicator: true,
           gardeningSkill: 1.7,
           harvestsCompleted: 1,
         },
@@ -259,6 +316,10 @@ describe('resident asset summary', () => {
       florins: 22,
       coins: 14,
       vegetables: 2,
+      energy: 72,
+      food: 3,
+      totalSeeds: 5,
+      seedReplicator: true,
       paintingSkill: 2.5,
       gardeningSkill: 1.7,
       shiftsCompleted: 1,

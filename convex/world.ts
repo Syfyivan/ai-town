@@ -22,9 +22,23 @@ export const ART_STUDIO_SHIFT_DURATION_MS = 60_000;
 export const GARDEN_PLOT_COUNT = 4;
 export const PLAYER_NAME_MAX_LENGTH = 16;
 export const PLAYER_SESSION_MAX_LENGTH = 80;
+export const GARDEN_MAX_ENERGY = 100;
+export const GARDEN_STARTER_FOOD = 1;
+export const TOWN_MONTH_DAYS = 30;
+export const TOWN_MARKET_DAY = 15;
+export const TAVERN_MEAL_COST = 12;
+export const TAVERN_MEAL_ENERGY = 45;
+export const COOKED_FOOD_ENERGY = 30;
+export const VEGETABLES_PER_FOOD = 2;
+export const SEED_REPLICATOR_COST = 80;
+export const MARKET_SEED_BUNDLE_COST = 10;
+export const MARKET_VEGETABLE_SELL_PRICE = 6;
+export const SEED_SAVE_SUCCESS_RATE = 0.4;
+export const SEED_REPLICATOR_SUCCESS_RATE = 0.95;
 
 export type StudioFocus = 'sketch' | 'color' | 'detail';
 export type GardenCropId = 'radish' | 'greens' | 'carrot';
+export type SeedInventory = Record<GardenCropId, number>;
 
 export type StudioWorkerStats = {
   florins: number;
@@ -61,10 +75,30 @@ export type GardenerStats = {
   harvestsCompleted: number;
 };
 
+export type GardenerLifeStats = {
+  energy: number;
+  food: number;
+  seeds: SeedInventory;
+  seedReplicator: boolean;
+};
+
 export type GardenPlotPhase = 'empty' | 'planted' | 'watered' | 'ready';
 
 const studioFocus = v.union(v.literal('sketch'), v.literal('color'), v.literal('detail'));
 const gardenCrop = v.union(v.literal('radish'), v.literal('greens'), v.literal('carrot'));
+
+const GARDEN_STARTER_SEEDS: SeedInventory = {
+  radish: 4,
+  greens: 3,
+  carrot: 2,
+};
+
+const GARDEN_ENERGY_COSTS = {
+  plant: 4,
+  water: 3,
+  harvest: 6,
+  saveSeeds: 5,
+};
 
 const INITIAL_STUDIO_WORKER: StudioWorkerStats = {
   florins: 0,
@@ -155,6 +189,114 @@ const GARDEN_CROP_CONFIG: Record<
   },
 };
 
+function clampEnergy(energy: number) {
+  return Math.max(0, Math.min(GARDEN_MAX_ENERGY, Math.round(energy)));
+}
+
+function normalizeSeeds(seeds?: Partial<SeedInventory>): SeedInventory {
+  return {
+    radish: Math.max(0, Math.floor(seeds?.radish ?? GARDEN_STARTER_SEEDS.radish)),
+    greens: Math.max(0, Math.floor(seeds?.greens ?? GARDEN_STARTER_SEEDS.greens)),
+    carrot: Math.max(0, Math.floor(seeds?.carrot ?? GARDEN_STARTER_SEEDS.carrot)),
+  };
+}
+
+function gardenLifeFromRecord(gardener?: Doc<'gardeners'>): GardenerLifeStats {
+  return {
+    energy: clampEnergy(gardener?.energy ?? GARDEN_MAX_ENERGY),
+    food: Math.max(0, Math.floor(gardener?.food ?? GARDEN_STARTER_FOOD)),
+    seeds: normalizeSeeds(gardener?.seeds),
+    seedReplicator: gardener?.seedReplicator ?? false,
+  };
+}
+
+function spendGardenEnergy(life: GardenerLifeStats, cost: number) {
+  if (life.energy < cost) {
+    throw new Error('能量不够了，先吃点东西或去酒馆买饭。');
+  }
+  return {
+    ...life,
+    energy: clampEnergy(life.energy - cost),
+  };
+}
+
+function spendGardenSeed(seeds: SeedInventory, crop: GardenCropId) {
+  if (seeds[crop] <= 0) {
+    throw new Error(`没有${GARDEN_CROP_CONFIG[crop].name}种子了。`);
+  }
+  return {
+    ...seeds,
+    [crop]: seeds[crop] - 1,
+  };
+}
+
+function addGardenSeeds(seeds: SeedInventory, crop: GardenCropId, amount: number) {
+  return {
+    ...seeds,
+    [crop]: seeds[crop] + amount,
+  };
+}
+
+function hashString(value: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function seededRandom(seed: string) {
+  return hashString(seed) / 0xffffffff;
+}
+
+export function resolveSeedSaving(seed: string, hasSeedReplicator: boolean) {
+  const successRate = hasSeedReplicator ? SEED_REPLICATOR_SUCCESS_RATE : SEED_SAVE_SUCCESS_RATE;
+  const success = seededRandom(`${seed}:success`) < successRate;
+  const seedCount = success ? 1 + Math.floor(seededRandom(`${seed}:count`) * 5) : 0;
+  return { success, seedCount, successRate };
+}
+
+export function getTownCalendar(now: number, daysSlept = 0) {
+  const dayNumber = Math.max(1, Math.floor(daysSlept) + 1);
+  const month = Math.floor((dayNumber - 1) / TOWN_MONTH_DAYS) + 1;
+  const dayOfMonth = ((dayNumber - 1) % TOWN_MONTH_DAYS) + 1;
+  const date = new Date(now);
+  const hour = date.getHours();
+  const minute = date.getMinutes();
+  const daysUntilMarket =
+    dayOfMonth <= TOWN_MARKET_DAY
+      ? TOWN_MARKET_DAY - dayOfMonth
+      : TOWN_MONTH_DAYS - dayOfMonth + TOWN_MARKET_DAY;
+  return {
+    dayNumber,
+    month,
+    dayOfMonth,
+    hour,
+    minute,
+    label: `溪山历 ${month}月${dayOfMonth}日 ${String(hour).padStart(2, '0')}:${String(
+      minute,
+    ).padStart(2, '0')}`,
+    isMarketDay: dayOfMonth === TOWN_MARKET_DAY,
+    marketDay: TOWN_MARKET_DAY,
+    daysUntilMarket,
+  };
+}
+
+function afford(
+  gardener: Doc<'gardeners'> | undefined,
+  worker: Doc<'artStudioWorkers'> | undefined,
+  cost: number,
+) {
+  if (gardener && gardener.coins >= cost) {
+    return { currency: 'coins' as const, gardenerCoins: gardener.coins - cost };
+  }
+  if (worker && worker.florins >= cost) {
+    return { currency: 'florins' as const, workerFlorins: worker.florins - cost };
+  }
+  throw new Error(`钱不够，需要 ${cost} 铜币或 Florins。`);
+}
+
 export function sanitizePlayerName(name: string) {
   const trimmed = name.trim();
   if (!trimmed) {
@@ -232,7 +374,10 @@ function roundStudioStat(value: number) {
   return Math.round(value * 10) / 10;
 }
 
-export function getStudioShiftProgress(now: number, shift: Pick<ArtStudioShift, 'startedAt' | 'endsAt'>) {
+export function getStudioShiftProgress(
+  now: number,
+  shift: Pick<ArtStudioShift, 'startedAt' | 'endsAt'>,
+) {
   const duration = shift.endsAt - shift.startedAt;
   if (duration <= 0) {
     return 1;
@@ -246,7 +391,9 @@ export function createArtStudioShift(
   now: number,
 ): ArtStudioShift {
   const config = STUDIO_FOCUS_CONFIG[focus];
-  const growthBonus = Math.floor((worker.paintingSkill + worker.creativity + worker.reputation) / 3);
+  const growthBonus = Math.floor(
+    (worker.paintingSkill + worker.creativity + worker.reputation) / 3,
+  );
   return {
     focus,
     title: config.title,
@@ -398,12 +545,19 @@ export function previewGardenCrops() {
 
 export function summarizeResidentAssets(
   worker?: StudioWorkerStats,
-  gardener?: GardenerStats,
+  gardener?: GardenerStats & Partial<GardenerLifeStats>,
 ) {
+  const seeds = normalizeSeeds(gardener?.seeds);
   return {
     florins: worker?.florins ?? 0,
     coins: gardener?.coins ?? 0,
     vegetables: gardener?.vegetables ?? 0,
+    energy: clampEnergy(gardener?.energy ?? GARDEN_MAX_ENERGY),
+    maxEnergy: GARDEN_MAX_ENERGY,
+    food: Math.max(0, Math.floor(gardener?.food ?? GARDEN_STARTER_FOOD)),
+    seeds,
+    totalSeeds: seeds.radish + seeds.greens + seeds.carrot,
+    seedReplicator: gardener?.seedReplicator ?? false,
     paintingSkill: worker?.paintingSkill ?? INITIAL_STUDIO_WORKER.paintingSkill,
     creativity: worker?.creativity ?? INITIAL_STUDIO_WORKER.creativity,
     reputation: worker?.reputation ?? INITIAL_STUDIO_WORKER.reputation,
@@ -438,6 +592,15 @@ function gardenerStatsFromRecord(gardener?: Doc<'gardeners'>): GardenerStats {
   };
 }
 
+function fullGardenerStatsFromRecord(
+  gardener?: Doc<'gardeners'>,
+): GardenerStats & GardenerLifeStats {
+  return {
+    ...gardenerStatsFromRecord(gardener),
+    ...gardenLifeFromRecord(gardener),
+  };
+}
+
 async function findArtStudioWorker(
   db: DatabaseReader,
   worldId: Id<'worlds'>,
@@ -463,9 +626,7 @@ async function findResidentProfile(
 ) {
   return await db
     .query('residentProfiles')
-    .withIndex('worldToken', (q) =>
-      q.eq('worldId', worldId).eq('tokenIdentifier', tokenIdentifier),
-    )
+    .withIndex('worldToken', (q) => q.eq('worldId', worldId).eq('tokenIdentifier', tokenIdentifier))
     .unique();
 }
 
@@ -536,6 +697,49 @@ async function getPlayerDisplayName(
     .withIndex('worldId', (q) => q.eq('worldId', worldId).eq('playerId', workerPlayerId))
     .unique();
   return description?.name ?? workerPlayerId;
+}
+
+function createMailboxLetters(
+  world: Doc<'worlds'>,
+  playerDescriptions: Array<Doc<'playerDescriptions'>>,
+  dayNumber: number,
+) {
+  const names = new Map(
+    playerDescriptions.map((description) => [description.playerId, description.name]),
+  );
+  const descriptions = new Map(
+    playerDescriptions.map((description) => [description.playerId, description.description]),
+  );
+  const npcPlayers = world.players
+    .filter((player) => !player.human)
+    .map((player) => ({
+      playerId: player.id,
+      name: names.get(player.id) ?? player.id,
+      description: descriptions.get(player.id) ?? '溪山镇的居民',
+    }))
+    .filter((player) => player.name !== player.playerId);
+
+  if (npcPlayers.length < 2) {
+    return [];
+  }
+
+  return npcPlayers.slice(0, Math.min(4, npcPlayers.length)).map((sender, index) => {
+    const recipient = npcPlayers[(index + dayNumber) % npcPlayers.length];
+    const topic =
+      index % 3 === 0
+        ? '今天集市的摊位要不要一起准备'
+        : index % 3 === 1
+          ? '门口信箱里新来的种子目录'
+          : '傍晚去酒馆听到的小镇传闻';
+    return {
+      id: `${dayNumber}-${sender.playerId}-${recipient.playerId}`,
+      from: sender.name,
+      to: recipient.name,
+      subject: topic,
+      text: `${sender.name} 写给 ${recipient.name}：${topic}。${sender.description.slice(0, 42)}`,
+      dayNumber,
+    };
+  });
 }
 
 function requireHumanPlayer(world: Doc<'worlds'>, workerPlayerId: string) {
@@ -823,8 +1027,9 @@ export const residentStatus = query({
     const worker = player ? await findArtStudioWorker(ctx.db, args.worldId, player.id) : undefined;
     const gardener = player ? await findGardener(ctx.db, args.worldId, player.id) : undefined;
     const workerStats = artStudioStatsFromWorker(worker ?? undefined);
-    const gardenerStats = gardenerStatsFromRecord(gardener ?? undefined);
+    const gardenerStats = fullGardenerStatsFromRecord(gardener ?? undefined);
     const now = Date.now();
+    const calendar = getTownCalendar(now, profile?.daysSlept ?? 0);
     const gardenPlots = ensureGardenPlots(gardener?.plots).map((plot) => ({
       slot: plot.slot,
       crop: plot.crop,
@@ -836,9 +1041,26 @@ export const residentStatus = query({
     const growingPlots = gardenPlots.filter(
       (plot) => plot.phase === 'planted' || plot.phase === 'watered',
     ).length;
+    const playerDescriptions = await ctx.db
+      .query('playerDescriptions')
+      .withIndex('worldId', (q) => q.eq('worldId', args.worldId))
+      .collect();
+    const mailboxLetters = createMailboxLetters(world, playerDescriptions, calendar.dayNumber);
 
     return {
       joined: player !== undefined,
+      calendar,
+      mailbox: {
+        mailboxes: Math.max(0, world.players.filter((candidate) => !candidate.human).length),
+        letters: mailboxLetters,
+      },
+      market: {
+        isOpen: calendar.isMarketDay,
+        dayOfMonth: TOWN_MARKET_DAY,
+        daysUntilMarket: calendar.daysUntilMarket,
+        sellPrice: MARKET_VEGETABLE_SELL_PRICE,
+        seedBundleCost: MARKET_SEED_BUNDLE_COST,
+      },
       profile: {
         name: profile?.name ?? DEFAULT_NAME,
         character: profile?.character ?? selectSessionCharacter(args.sessionId),
@@ -1038,8 +1260,10 @@ export const gardenStatus = query({
       throw new Error(`Invalid world ID: ${args.worldId}`);
     }
 
-    const gardener = args.playerId ? await findGardener(ctx.db, args.worldId, args.playerId) : undefined;
-    const gardenerStats = gardenerStatsFromRecord(gardener ?? undefined);
+    const gardener = args.playerId
+      ? await findGardener(ctx.db, args.worldId, args.playerId)
+      : undefined;
+    const gardenerStats = fullGardenerStatsFromRecord(gardener ?? undefined);
     const now = Date.now();
     const plots = ensureGardenPlots(gardener?.plots).map((plot) => {
       const phase = getGardenPlotPhase(now, plot);
@@ -1077,13 +1301,28 @@ export const gardenStatus = query({
         gardeningSkill: entry.gardeningSkill,
         harvestsCompleted: entry.harvestsCompleted,
       }));
+    const gardenerSummary = args.playerId
+      ? {
+          playerId: args.playerId,
+          gardenerName: '新来的园丁',
+          ...gardenerStats,
+        }
+      : undefined;
 
     return {
       garden: {
         name: '溪山小菜园',
         stewardName: '沈梨',
-        notice: '空地播种，浇水后等待成熟，收获能获得菜和铜币。',
-        crops: previewGardenCrops(),
+        notice: '开局送种子；成熟作物可以收获，也可以留种。',
+        crops: previewGardenCrops().map((crop) => ({
+          ...crop,
+          seedsAvailable: gardenerStats.seeds[crop.crop],
+        })),
+        seedSaving: {
+          baseSuccessRate: SEED_SAVE_SUCCESS_RATE,
+          replicatorSuccessRate: SEED_REPLICATOR_SUCCESS_RATE,
+          seedReplicatorCost: SEED_REPLICATOR_COST,
+        },
       },
       gardener: gardener
         ? {
@@ -1092,7 +1331,7 @@ export const gardenStatus = query({
             ...gardenerStats,
             lastTendedAt: gardener.lastTendedAt,
           }
-        : undefined,
+        : gardenerSummary,
       plots,
       leaderboard,
     };
@@ -1115,6 +1354,11 @@ export const plantGardenCrop = mutation({
 
     const gardener = await findGardener(ctx.db, world._id, args.playerId);
     const now = Date.now();
+    const life = spendGardenEnergy(
+      gardenLifeFromRecord(gardener ?? undefined),
+      GARDEN_ENERGY_COSTS.plant,
+    );
+    const seeds = spendGardenSeed(life.seeds, args.crop);
     const plots = plantGardenPlot(ensureGardenPlots(gardener?.plots), args.slot, args.crop, now);
     const gardenerName = await getPlayerDisplayName(ctx.db, world._id, args.playerId);
 
@@ -1122,6 +1366,10 @@ export const plantGardenCrop = mutation({
       await ctx.db.patch(gardener._id, {
         gardenerName,
         plots,
+        energy: life.energy,
+        food: life.food,
+        seeds,
+        seedReplicator: life.seedReplicator,
         lastTendedAt: now,
       });
     } else {
@@ -1130,6 +1378,10 @@ export const plantGardenCrop = mutation({
         playerId: args.playerId,
         gardenerName,
         ...INITIAL_GARDENER_STATS,
+        energy: life.energy,
+        food: life.food,
+        seeds,
+        seedReplicator: life.seedReplicator,
         plots,
         lastTendedAt: now,
       });
@@ -1156,9 +1408,14 @@ export const waterGardenCrop = mutation({
       throw new Error('你还没有开始照看小菜园。');
     }
     const now = Date.now();
+    const life = spendGardenEnergy(gardenLifeFromRecord(gardener), GARDEN_ENERGY_COSTS.water);
     const plots = waterGardenPlot(gardener.plots, args.slot, now);
     await ctx.db.patch(gardener._id, {
       plots,
+      energy: life.energy,
+      food: life.food,
+      seeds: life.seeds,
+      seedReplicator: life.seedReplicator,
       lastTendedAt: now,
     });
     return plots.find((plot) => plot.slot === args.slot);
@@ -1183,6 +1440,7 @@ export const harvestGardenCrop = mutation({
       throw new Error('你还没有开始照看小菜园。');
     }
     const now = Date.now();
+    const life = spendGardenEnergy(gardenLifeFromRecord(gardener), GARDEN_ENERGY_COSTS.harvest);
     const outcome = harvestGardenPlot(
       gardenerStatsFromRecord(gardener),
       gardener.plots,
@@ -1191,10 +1449,336 @@ export const harvestGardenCrop = mutation({
     );
     await ctx.db.patch(gardener._id, {
       ...outcome.stats,
+      energy: life.energy,
+      food: life.food,
+      seeds: life.seeds,
+      seedReplicator: life.seedReplicator,
       plots: outcome.plots,
       lastTendedAt: now,
     });
     return outcome.harvest;
+  },
+});
+
+export const saveGardenSeeds = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    playerId,
+    slot: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    requireHumanPlayer(world, args.playerId);
+
+    const gardener = await findGardener(ctx.db, world._id, args.playerId);
+    if (!gardener) {
+      throw new Error('你还没有开始照看小菜园。');
+    }
+    const now = Date.now();
+    const normalizedPlots = ensureGardenPlots(gardener.plots);
+    const plot = findGardenPlot(normalizedPlots, args.slot);
+    if (getGardenPlotPhase(now, plot) !== 'ready') {
+      throw new Error('只有成熟作物可以留种。');
+    }
+    const crop = plot.crop!;
+    const life = spendGardenEnergy(gardenLifeFromRecord(gardener), GARDEN_ENERGY_COSTS.saveSeeds);
+    const saving = resolveSeedSaving(
+      `${world._id}:${args.playerId}:${args.slot}:${gardener.harvestsCompleted}:${now}`,
+      life.seedReplicator,
+    );
+    const seeds = saving.success ? addGardenSeeds(life.seeds, crop, saving.seedCount) : life.seeds;
+    await ctx.db.patch(gardener._id, {
+      energy: life.energy,
+      food: life.food,
+      seeds,
+      seedReplicator: life.seedReplicator,
+      plots: replaceGardenPlot(normalizedPlots, { slot: args.slot }),
+      lastTendedAt: now,
+    });
+    return {
+      crop,
+      cropName: GARDEN_CROP_CONFIG[crop].name,
+      ...saving,
+    };
+  },
+});
+
+export const buyTavernMeal = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    playerId,
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    requireHumanPlayer(world, args.playerId);
+
+    const gardener = await findGardener(ctx.db, world._id, args.playerId);
+    const worker = await findArtStudioWorker(ctx.db, world._id, args.playerId);
+    const payment = afford(gardener ?? undefined, worker ?? undefined, TAVERN_MEAL_COST);
+    const life = gardenLifeFromRecord(gardener ?? undefined);
+    const gardenerName = await getPlayerDisplayName(ctx.db, world._id, args.playerId);
+    if (payment.workerFlorins !== undefined && worker) {
+      await ctx.db.patch(worker._id, { florins: payment.workerFlorins });
+    }
+    const nextEnergy = clampEnergy(life.energy + TAVERN_MEAL_ENERGY);
+    const commonPatch = {
+      energy: nextEnergy,
+      food: life.food,
+      seeds: life.seeds,
+      seedReplicator: life.seedReplicator,
+      lastTendedAt: Date.now(),
+    };
+    if (gardener) {
+      await ctx.db.patch(gardener._id, {
+        ...commonPatch,
+        gardenerName,
+        coins: payment.gardenerCoins ?? gardener.coins,
+      });
+    } else {
+      await ctx.db.insert('gardeners', {
+        worldId: world._id,
+        playerId: args.playerId,
+        gardenerName,
+        ...INITIAL_GARDENER_STATS,
+        ...commonPatch,
+        plots: createGardenPlots(),
+      });
+    }
+    return {
+      paidWith: payment.currency,
+      cost: TAVERN_MEAL_COST,
+      energy: nextEnergy,
+      energyGain: TAVERN_MEAL_ENERGY,
+    };
+  },
+});
+
+export const cookGardenFood = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    playerId,
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    requireHumanPlayer(world, args.playerId);
+
+    const gardener = await findGardener(ctx.db, world._id, args.playerId);
+    if (!gardener) {
+      throw new Error('你还没有蔬菜可以做饭。');
+    }
+    if (gardener.vegetables < VEGETABLES_PER_FOOD) {
+      throw new Error(`做饭需要 ${VEGETABLES_PER_FOOD} 份蔬菜。`);
+    }
+    const life = gardenLifeFromRecord(gardener);
+    await ctx.db.patch(gardener._id, {
+      vegetables: gardener.vegetables - VEGETABLES_PER_FOOD,
+      food: life.food + 1,
+      energy: life.energy,
+      seeds: life.seeds,
+      seedReplicator: life.seedReplicator,
+      lastTendedAt: Date.now(),
+    });
+    return {
+      food: life.food + 1,
+      vegetablesSpent: VEGETABLES_PER_FOOD,
+    };
+  },
+});
+
+export const eatGardenFood = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    playerId,
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    requireHumanPlayer(world, args.playerId);
+
+    const gardener = await findGardener(ctx.db, world._id, args.playerId);
+    if (!gardener) {
+      throw new Error('背包里还没有吃的。');
+    }
+    const life = gardenLifeFromRecord(gardener);
+    if (life.food <= 0) {
+      throw new Error('背包里还没有吃的。');
+    }
+    const nextEnergy = clampEnergy(life.energy + COOKED_FOOD_ENERGY);
+    await ctx.db.patch(gardener._id, {
+      food: life.food - 1,
+      energy: nextEnergy,
+      seeds: life.seeds,
+      seedReplicator: life.seedReplicator,
+      lastTendedAt: Date.now(),
+    });
+    return {
+      food: life.food - 1,
+      energy: nextEnergy,
+      energyGain: COOKED_FOOD_ENERGY,
+    };
+  },
+});
+
+export const buySeedReplicator = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    playerId,
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    requireHumanPlayer(world, args.playerId);
+
+    const gardener = await findGardener(ctx.db, world._id, args.playerId);
+    const worker = await findArtStudioWorker(ctx.db, world._id, args.playerId);
+    const life = gardenLifeFromRecord(gardener ?? undefined);
+    if (life.seedReplicator) {
+      return { alreadyOwned: true, successRate: SEED_REPLICATOR_SUCCESS_RATE };
+    }
+    const payment = afford(gardener ?? undefined, worker ?? undefined, SEED_REPLICATOR_COST);
+    const gardenerName = await getPlayerDisplayName(ctx.db, world._id, args.playerId);
+    if (payment.workerFlorins !== undefined && worker) {
+      await ctx.db.patch(worker._id, { florins: payment.workerFlorins });
+    }
+    const commonPatch = {
+      energy: life.energy,
+      food: life.food,
+      seeds: life.seeds,
+      seedReplicator: true,
+      lastTendedAt: Date.now(),
+    };
+    if (gardener) {
+      await ctx.db.patch(gardener._id, {
+        ...commonPatch,
+        gardenerName,
+        coins: payment.gardenerCoins ?? gardener.coins,
+      });
+    } else {
+      await ctx.db.insert('gardeners', {
+        worldId: world._id,
+        playerId: args.playerId,
+        gardenerName,
+        ...INITIAL_GARDENER_STATS,
+        ...commonPatch,
+        plots: createGardenPlots(),
+      });
+    }
+    return {
+      alreadyOwned: false,
+      paidWith: payment.currency,
+      cost: SEED_REPLICATOR_COST,
+      successRate: SEED_REPLICATOR_SUCCESS_RATE,
+    };
+  },
+});
+
+async function requireMarketOpen(db: DatabaseReader, world: Doc<'worlds'>, marketPlayerId: string) {
+  const player = requireHumanPlayer(world, marketPlayerId);
+  const profile = player.human ? await findResidentProfile(db, world._id, player.human) : undefined;
+  const calendar = getTownCalendar(Date.now(), profile?.daysSlept ?? 0);
+  if (!calendar.isMarketDay) {
+    throw new Error(`今天不是集市日，下次集市还有 ${calendar.daysUntilMarket} 天。`);
+  }
+  return calendar;
+}
+
+export const marketBuySeedBundle = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    playerId,
+    crop: gardenCrop,
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    await requireMarketOpen(ctx.db, world, args.playerId);
+    const gardener = await findGardener(ctx.db, world._id, args.playerId);
+    const worker = await findArtStudioWorker(ctx.db, world._id, args.playerId);
+    const payment = afford(gardener ?? undefined, worker ?? undefined, MARKET_SEED_BUNDLE_COST);
+    const life = gardenLifeFromRecord(gardener ?? undefined);
+    const gardenerName = await getPlayerDisplayName(ctx.db, world._id, args.playerId);
+    if (payment.workerFlorins !== undefined && worker) {
+      await ctx.db.patch(worker._id, { florins: payment.workerFlorins });
+    }
+    const seeds = addGardenSeeds(life.seeds, args.crop, 3);
+    const commonPatch = {
+      energy: life.energy,
+      food: life.food,
+      seeds,
+      seedReplicator: life.seedReplicator,
+      lastTendedAt: Date.now(),
+    };
+    if (gardener) {
+      await ctx.db.patch(gardener._id, {
+        ...commonPatch,
+        gardenerName,
+        coins: payment.gardenerCoins ?? gardener.coins,
+      });
+    } else {
+      await ctx.db.insert('gardeners', {
+        worldId: world._id,
+        playerId: args.playerId,
+        gardenerName,
+        ...INITIAL_GARDENER_STATS,
+        ...commonPatch,
+        plots: createGardenPlots(),
+      });
+    }
+    return {
+      crop: args.crop,
+      cropName: GARDEN_CROP_CONFIG[args.crop].name,
+      seedsAdded: 3,
+      paidWith: payment.currency,
+      cost: MARKET_SEED_BUNDLE_COST,
+    };
+  },
+});
+
+export const marketSellVegetable = mutation({
+  args: {
+    worldId: v.id('worlds'),
+    playerId,
+  },
+  handler: async (ctx, args) => {
+    const world = await ctx.db.get(args.worldId);
+    if (!world) {
+      throw new Error(`Invalid world ID: ${args.worldId}`);
+    }
+    await requireMarketOpen(ctx.db, world, args.playerId);
+    const gardener = await findGardener(ctx.db, world._id, args.playerId);
+    if (!gardener || gardener.vegetables <= 0) {
+      throw new Error('没有可以摆摊出售的蔬菜。');
+    }
+    const life = gardenLifeFromRecord(gardener);
+    await ctx.db.patch(gardener._id, {
+      vegetables: gardener.vegetables - 1,
+      coins: gardener.coins + MARKET_VEGETABLE_SELL_PRICE,
+      energy: life.energy,
+      food: life.food,
+      seeds: life.seeds,
+      seedReplicator: life.seedReplicator,
+      lastTendedAt: Date.now(),
+    });
+    return {
+      vegetables: gardener.vegetables - 1,
+      coins: gardener.coins + MARKET_VEGETABLE_SELL_PRICE,
+      earnedCoins: MARKET_VEGETABLE_SELL_PRICE,
+    };
   },
 });
 
@@ -1371,12 +1955,8 @@ export const townObservatory = query({
       }),
     );
     const memories = memoryGroups.flat();
-    const recentMemories = memories
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 8);
-    const importantMemories = [...memories]
-      .sort((a, b) => b.importance - a.importance)
-      .slice(0, 5);
+    const recentMemories = memories.sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
+    const importantMemories = [...memories].sort((a, b) => b.importance - a.importance).slice(0, 5);
 
     const participatedTogether = await ctx.db
       .query('participatedTogether')
@@ -1422,7 +2002,8 @@ export const townObservatory = query({
           until: player.activity!.until,
         })),
       conversations: conversationSummaries.sort(
-        (a, b) => (b.latestMessageAt ?? b.ended ?? b.created) - (a.latestMessageAt ?? a.ended ?? a.created),
+        (a, b) =>
+          (b.latestMessageAt ?? b.ended ?? b.created) - (a.latestMessageAt ?? a.ended ?? a.created),
       ),
       recentMemories,
       importantMemories,
