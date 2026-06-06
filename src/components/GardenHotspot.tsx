@@ -1,6 +1,6 @@
 import { PixiComponent, applyDefaultProps } from '@pixi/react';
 import * as PIXI from 'pixi.js';
-import { FARM_TILE_FRAMES, addFarmTile } from './farmLifeTiles';
+import { GENTLE_TILES, addGentleTile, addGentleTileGrid } from './gentleTownTiles';
 
 type GardenHotspotProps = {
   onOpenGarden: () => void;
@@ -24,70 +24,36 @@ function buildGardenSprite(tileDim: number) {
   const container = new PIXI.Container() as GardenHotspotContainer;
   const graphics = new PIXI.Graphics();
 
-  graphics.beginFill(0x1f1308, 0.2);
-  graphics.drawRect(tileDim * 0.35, tileDim * 0.55, width - tileDim * 0.7, height - tileDim);
+  graphics.beginFill(0x181425, 0.14);
+  graphics.drawEllipse(width / 2, tileDim * 3.35, tileDim * 2.35, tileDim * 0.34);
   graphics.endFill();
   container.addChild(graphics);
 
-  for (let x = 0.55; x < 6.2; x += 1) {
-    addFarmTile(container, FARM_TILE_FRAMES.fence, tileDim, x, 0.35);
-    addFarmTile(container, FARM_TILE_FRAMES.fence, tileDim, x, 4.15);
-  }
-  for (let y = 1.2; y < 4.1; y += 1) {
-    addFarmTile(container, FARM_TILE_FRAMES.fence, tileDim, 0.25, y);
-    addFarmTile(container, FARM_TILE_FRAMES.fence, tileDim, 6.25, y);
-  }
-
-  const plots = [
-    { x: 1.25, y: 1.35, frame: FARM_TILE_FRAMES.soil },
-    { x: 2.25, y: 1.35, frame: FARM_TILE_FRAMES.wet },
-    { x: 3.25, y: 1.35, frame: FARM_TILE_FRAMES.soil },
-    { x: 4.25, y: 1.35, frame: FARM_TILE_FRAMES.wet },
-    { x: 1.25, y: 2.35, frame: FARM_TILE_FRAMES.wet },
-    { x: 2.25, y: 2.35, frame: FARM_TILE_FRAMES.soil },
-    { x: 3.25, y: 2.35, frame: FARM_TILE_FRAMES.wet },
-    { x: 4.25, y: 2.35, frame: FARM_TILE_FRAMES.soil },
-  ];
-  for (const plot of plots) {
-    addFarmTile(container, plot.frame, tileDim, plot.x, plot.y);
-  }
-
-  addFarmTile(container, FARM_TILE_FRAMES.scarecrow, tileDim, 5.05, 1.35);
-  addFarmTile(container, FARM_TILE_FRAMES.flowerRed, tileDim, 5.05, 2.35);
-  addFarmTile(container, FARM_TILE_FRAMES.flowerBlue, tileDim, 0.95, 3.25);
-  addFarmTile(container, FARM_TILE_FRAMES.sign, tileDim, 2.8, 0.05);
-
-  const sign = new PIXI.Text(
-    '小菜园',
-    new PIXI.TextStyle({
-      fill: '#181425',
-      fontFamily: 'VCR OSD Mono, monospace',
-      fontSize: Math.max(11, tileDim * 0.36),
-      align: 'center',
-    }),
+  addGentleTileGrid(
+    container,
+    [
+      [GENTLE_TILES.fieldTopLeft, GENTLE_TILES.fieldTopRight],
+      [GENTLE_TILES.fieldBottomLeft, GENTLE_TILES.fieldBottomRight],
+    ],
+    tileDim,
+    2.35,
+    1.2,
   );
-  sign.anchor.set(0.5);
-  sign.x = width / 2;
-  sign.y = tileDim * 0.38;
-
-  const caption = new PIXI.Text(
-    '种菜',
-    new PIXI.TextStyle({
-      fill: '#ffffff',
-      fontFamily: 'VCR OSD Mono, monospace',
-      fontSize: Math.max(10, tileDim * 0.32),
-      align: 'center',
-      dropShadow: true,
-      dropShadowColor: '#181425',
-      dropShadowDistance: 2,
-    }),
+  addGentleTileGrid(
+    container,
+    [
+      [GENTLE_TILES.fieldTopLeft, GENTLE_TILES.fieldTopRight],
+      [GENTLE_TILES.fieldBottomLeft, GENTLE_TILES.fieldBottomRight],
+    ],
+    tileDim,
+    3.6,
+    2.15,
   );
-  caption.anchor.set(0.5);
-  caption.x = width / 2;
-  caption.y = tileDim * 4.55;
-
-  container.addChild(sign);
-  container.addChild(caption);
+  addGentleTile(container, GENTLE_TILES.stump, tileDim, 1.25, 2.45);
+  addGentleTile(container, GENTLE_TILES.bush, tileDim, 5.1, 1.35);
+  addGentleTile(container, GENTLE_TILES.flowerYellow, tileDim, 1.25, 1.2);
+  addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 5.35, 3.15);
+  addGentleTile(container, GENTLE_TILES.mushroom, tileDim, 4.95, 3.75);
   container.hitArea = new PIXI.Rectangle(0, 0, width, height);
   container.eventMode = 'static';
   container.cursor = 'pointer';

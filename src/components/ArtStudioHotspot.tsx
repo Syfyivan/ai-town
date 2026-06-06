@@ -1,6 +1,6 @@
 import { PixiComponent, applyDefaultProps } from '@pixi/react';
 import * as PIXI from 'pixi.js';
-import { FARM_TILE_FRAMES, addFarmTile, addFarmTileGrid } from './farmLifeTiles';
+import { GENTLE_TILES, addGentleTile, addGentleTileGrid } from './gentleTownTiles';
 
 type ArtStudioHotspotProps = {
   onOpenArtStudio: () => void;
@@ -24,51 +24,27 @@ function buildArtStudioSprite(tileDim: number) {
   const container = new PIXI.Container() as ArtStudioHotspotContainer;
   const graphics = new PIXI.Graphics();
 
-  graphics.beginFill(0x181425, 0.34);
-  graphics.drawRect(tileDim * 1.05, tileDim * 4.5, tileDim * 5.85, tileDim * 0.36);
+  graphics.beginFill(0x181425, 0.18);
+  graphics.drawEllipse(tileDim * 4, tileDim * 4.42, tileDim * 2.25, tileDim * 0.34);
   graphics.endFill();
   container.addChild(graphics);
 
-  const barnRows = Array.from({ length: 5 }, (_, row) =>
-    Array.from({ length: 5 }, (_, column) => FARM_TILE_FRAMES.barnFrontStart + row * 5 + column),
+  addGentleTileGrid(
+    container,
+    [
+      [GENTLE_TILES.tentTopLeft, GENTLE_TILES.tentTop, GENTLE_TILES.tentTopRight],
+      [GENTLE_TILES.tentMidLeft, GENTLE_TILES.tentMid, GENTLE_TILES.tentMidRight],
+      [GENTLE_TILES.tentBottomLeft, GENTLE_TILES.tentBottom, GENTLE_TILES.tentBottomRight],
+    ],
+    tileDim,
+    2.5,
+    1,
   );
-  addFarmTileGrid(container, barnRows, tileDim, 1.5, 0);
-  addFarmTile(container, FARM_TILE_FRAMES.board, tileDim, 1.15, 3.35);
-  addFarmTile(container, FARM_TILE_FRAMES.flowerRed, tileDim, 0.85, 4.05);
-  addFarmTile(container, FARM_TILE_FRAMES.flowerBlue, tileDim, 6.15, 4.05);
-  addFarmTile(container, FARM_TILE_FRAMES.sign, tileDim, 3.5, 0.25);
 
-  const sign = new PIXI.Text(
-    '溪山画室',
-    new PIXI.TextStyle({
-      fill: '#181425',
-      fontFamily: 'VCR OSD Mono, monospace',
-      fontSize: Math.max(11, tileDim * 0.36),
-      align: 'center',
-    }),
-  );
-  sign.anchor.set(0.5);
-  sign.x = width / 2;
-  sign.y = tileDim * 0.6;
-
-  const caption = new PIXI.Text(
-    '临时工',
-    new PIXI.TextStyle({
-      fill: '#ffffff',
-      fontFamily: 'VCR OSD Mono, monospace',
-      fontSize: Math.max(10, tileDim * 0.32),
-      align: 'center',
-      dropShadow: true,
-      dropShadowColor: '#181425',
-      dropShadowDistance: 2,
-    }),
-  );
-  caption.anchor.set(0.5);
-  caption.x = width / 2;
-  caption.y = tileDim * 4.58;
-
-  container.addChild(sign);
-  container.addChild(caption);
+  addGentleTile(container, GENTLE_TILES.log, tileDim, 1.45, 3.35);
+  addGentleTile(container, GENTLE_TILES.flowerRed, tileDim, 1.2, 4.05);
+  addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 5.55, 4.08);
+  addGentleTile(container, GENTLE_TILES.post, tileDim, 5.7, 3.05);
   container.hitArea = new PIXI.Rectangle(0, 0, width, height);
   container.eventMode = 'static';
   container.cursor = 'pointer';

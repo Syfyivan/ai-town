@@ -156,14 +156,6 @@ export default function Home() {
         )}
         <ToastContainer position="bottom-right" autoClose={2000} closeOnClick theme="dark" />
       </div>
-      <a
-        className="town-asset-credit"
-        href="https://github.com/ffffhx/games"
-        target="_blank"
-        rel="noreferrer"
-      >
-        pixel assets: fffhx / EmanuelleDev
-      </a>
     </main>
   );
 }
