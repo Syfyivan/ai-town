@@ -3,16 +3,12 @@ import Game from './components/Game.tsx';
 import { ToastContainer } from 'react-toastify';
 import a16zImg from '../assets/a16z.png';
 import convexImg from '../assets/convex.svg';
-import starImg from '../assets/star.svg';
-import helpImg from '../assets/help.svg';
-import cinemaImg from '../assets/cinema.svg';
 // import { UserButton } from '@clerk/clerk-react';
 // import { Authenticated, Unauthenticated } from 'convex/react';
 // import LoginButton from './components/buttons/LoginButton.tsx';
 import { useState } from 'react';
 import ReactModal from 'react-modal';
 import MusicButton from './components/buttons/MusicButton.tsx';
-import Button from './components/buttons/Button.tsx';
 import InteractButton from './components/buttons/InteractButton.tsx';
 import FreezeButton from './components/FreezeButton.tsx';
 import { MAX_HUMAN_PLAYERS } from '../convex/constants.ts';
@@ -24,7 +20,7 @@ import ArtStudioOverlay from './components/ArtStudioOverlay.tsx';
 import GardenOverlay from './components/GardenOverlay.tsx';
 import { useResidentPresence } from './hooks/useResidentPresence.ts';
 import ProfessionWorkOverlay from './components/ProfessionWorkOverlay.tsx';
-import { PROFESSION_BUILDINGS, ProfessionId } from './components/professionCatalog.ts';
+import { ProfessionId } from './components/professionCatalog.ts';
 
 type TownScene = 'town' | 'studio' | 'garden' | 'profession';
 
@@ -73,8 +69,8 @@ export default function Home() {
           <p className="mt-4">点击地图可以移动你的角色。</p>
           <p className="mt-4">
             也可以用 WASD 或方向键移动；沿着小路走到画室、菜园、影院入口会自动进入，靠近入口时按 X
-            也可以手动进入，右键职业建筑门口可以进门，按 Z 停止移动或取消查看。进入画室后，WASD
-            移动到工作站，X 开工或领取工资。进入菜园后，WASD 在田里移动，X 播种、浇水或收获，Z
+            也可以手动进入，按 Z 停止移动或取消查看。进入画室后，WASD 移动到工作站，X
+            开工或领取工资。进入菜园后，WASD 在田里移动，X 播种、浇水或收获，Z
             切换种子。进入木作坊、铁铺、星井小塔或酒馆后，走到接待桌前按
             X，或右键桌上的白纸，确认报名 10:00-18:00 的一天临时工。
           </p>
@@ -100,18 +96,17 @@ export default function Home() {
       <div className={`town-app-shell ${townIsImmersive ? 'town-app-shell-resident' : ''}`}>
         {scene === 'town' && !townIsImmersive && (
           <>
-            <h1 className="mx-auto text-4xl p-3 sm:text-8xl lg:text-9xl font-bold font-display leading-none tracking-wide game-title w-full text-left sm:text-center sm:w-auto">
-              溪山镇
-            </h1>
-
-            <div className="max-w-xs md:max-w-xl lg:max-w-none mx-auto my-4 text-center text-base sm:text-xl md:text-2xl text-white leading-tight shadow-solid">
-              一个中文 AI 小镇，角色会闲逛、聊天、记住彼此的故事。
-              {/* <Unauthenticated>
+            <header className="town-hero">
+              <h1 className="town-hero-title game-title">溪山镇</h1>
+              <p className="town-hero-subtitle shadow-solid">
+                一个中文 AI 小镇，角色会闲逛、聊天、记住彼此的故事。
+                {/* <Unauthenticated>
             <div className="my-1.5 sm:my-0" />
             Log in to join the town
             <br className="block sm:hidden" /> and the conversation!
           </Unauthenticated> */}
-            </div>
+              </p>
+            </header>
           </>
         )}
 
@@ -137,47 +132,34 @@ export default function Home() {
 
         {scene === 'town' && (
           <footer className={`town-footer ${townIsImmersive ? 'town-footer-resident' : ''}`}>
-            <div className="flex gap-4 flex-grow pointer-events-none">
+            <div className="town-footer-controls">
               <FreezeButton />
               <MusicButton />
-              <Button href="https://github.com/a16z-infra/ai-town" imgUrl={starImg}>
-                上游
-              </Button>
-              <Button imgUrl={cinemaImg} onClick={() => setCinemaOpen(true)}>
-                影院
-              </Button>
-              <Button imgUrl={starImg} onClick={() => setScene('studio')}>
-                画室
-              </Button>
-              <Button imgUrl={starImg} onClick={() => setScene('garden')}>
-                菜园
-              </Button>
-              {PROFESSION_BUILDINGS.map((building) => (
-                <Button
-                  key={building.profession}
-                  imgUrl={starImg}
-                  onClick={() => openProfession(building.profession)}
-                >
-                  {building.buildingName}
-                </Button>
-              ))}
-              <Button imgUrl={starImg} onClick={() => setObservatoryOpen(true)}>
-                镇志
-              </Button>
-              <Button imgUrl={starImg} onClick={() => setNpcManagerOpen(true)}>
-                NPC
-              </Button>
               <InteractButton />
-              <Button imgUrl={helpImg} onClick={() => setHelpModalOpen(true)}>
-                帮助
-              </Button>
+              <details className="town-system-menu">
+                <summary>菜单</summary>
+                <div className="town-system-menu-panel">
+                  <button type="button" onClick={() => setObservatoryOpen(true)}>
+                    镇志
+                  </button>
+                  <button type="button" onClick={() => setNpcManagerOpen(true)}>
+                    NPC
+                  </button>
+                  <button type="button" onClick={() => setHelpModalOpen(true)}>
+                    帮助
+                  </button>
+                  <a href="https://github.com/a16z-infra/ai-town">上游代码</a>
+                </div>
+              </details>
             </div>
-            <a href="https://a16z.com">
-              <img className="w-8 h-8 pointer-events-auto" src={a16zImg} alt="a16z" />
-            </a>
-            <a href="https://convex.dev/c/ai-town">
-              <img className="w-20 h-8 pointer-events-auto" src={convexImg} alt="Convex" />
-            </a>
+            <div className="town-footer-brands">
+              <a href="https://a16z.com">
+                <img className="w-8 h-8 pointer-events-auto" src={a16zImg} alt="a16z" />
+              </a>
+              <a href="https://convex.dev/c/ai-town">
+                <img className="w-20 h-8 pointer-events-auto" src={convexImg} alt="Convex" />
+              </a>
+            </div>
           </footer>
         )}
         <ToastContainer position="bottom-right" autoClose={2000} closeOnClick theme="dark" />

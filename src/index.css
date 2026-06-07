@@ -94,6 +94,30 @@ body {
   padding: 0.75rem;
 }
 
+.town-hero {
+  flex: 0 0 auto;
+  margin-inline: auto;
+  max-width: min(960px, calc(100% - 2rem));
+  padding: clamp(0.45rem, 1.2vh, 1rem) 1rem clamp(0.3rem, 1vh, 0.75rem);
+  text-align: center;
+}
+
+.town-hero-title {
+  font-family: 'Upheaval Pro', 'sans-serif';
+  font-size: clamp(3.25rem, 8vw, 7rem);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 0.88;
+}
+
+.town-hero-subtitle {
+  color: #ffffff;
+  font-size: clamp(1rem, 2vw, 1.55rem);
+  line-height: 1.2;
+  margin: 0.55rem auto 0;
+  max-width: 780px;
+}
+
 .town-footer {
   align-items: center;
   bottom: 0;
@@ -101,16 +125,105 @@ body {
   flex: 0 0 auto;
   flex-wrap: nowrap;
   gap: 0.75rem;
-  justify-content: flex-end;
+  justify-content: space-between;
   left: 0;
-  margin-top: 1rem;
-  max-height: 96px;
+  margin-top: 0.5rem;
   min-height: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 1.5rem;
+  overflow: visible;
+  padding: 0.85rem 1.5rem 1.25rem;
   pointer-events: none;
   width: 100%;
+}
+
+.town-footer-controls {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 0.65rem;
+  justify-content: flex-start;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.town-footer .button {
+  border-width: 0.82em;
+  font-size: clamp(1rem, 1.7vw, 1.25rem);
+  white-space: nowrap;
+}
+
+.town-footer .button img {
+  height: 1.35rem;
+  width: 1.35rem;
+}
+
+.town-footer-brands {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  pointer-events: auto;
+}
+
+.town-system-menu {
+  color: #ffffff;
+  pointer-events: auto;
+  position: relative;
+}
+
+.town-system-menu summary {
+  background: #3a4466;
+  border: 4px solid #181425;
+  cursor: pointer;
+  display: block;
+  font-size: clamp(1rem, 1.7vw, 1.25rem);
+  line-height: 1;
+  min-width: 5.5rem;
+  padding: 0.72rem 0.95rem;
+  text-align: center;
+  text-shadow: 0 0.1em 0 rgba(0, 0, 0, 0.5);
+  user-select: none;
+}
+
+.town-system-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.town-system-menu[open] summary,
+.town-system-menu summary:hover {
+  background: #5a6988;
+}
+
+.town-system-menu-panel {
+  background: rgba(35, 38, 58, 0.98);
+  border: 5px solid #181425;
+  bottom: calc(100% + 0.55rem);
+  box-shadow: 0 12px 0 rgba(0, 0, 0, 0.28);
+  display: grid;
+  gap: 0.35rem;
+  min-width: 11rem;
+  padding: 0.55rem;
+  position: absolute;
+  right: 0;
+  z-index: 20;
+}
+
+.town-system-menu-panel button,
+.town-system-menu-panel a {
+  background: #2b2f4a;
+  border: 3px solid #181425;
+  color: #ffffff;
+  display: block;
+  line-height: 1.1;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  text-decoration: none;
+  text-shadow: 0 0.1em 0 rgba(0, 0, 0, 0.5);
+}
+
+.town-system-menu-panel button:hover,
+.town-system-menu-panel a:hover {
+  background: #6e2146;
 }
 
 .town-footer-resident {
@@ -122,6 +235,10 @@ body {
   right: 0.75rem;
   width: auto;
   z-index: 10;
+}
+
+.town-footer-resident .town-footer-controls {
+  max-width: min(520px, calc(100% - 8rem));
 }
 
 .game-frame {
@@ -195,6 +312,40 @@ body {
 @media screen and (min-width: 640px) {
   .game-frame {
     border-width: 48px;
+  }
+}
+
+@media (max-width: 640px) {
+  .town-hero {
+    max-width: calc(100% - 1rem);
+    padding-inline: 0.5rem;
+  }
+
+  .town-hero-subtitle {
+    margin-top: 0.35rem;
+    max-width: 21rem;
+  }
+
+  .town-footer {
+    gap: 0.45rem;
+    padding: 0.55rem 0.65rem 0.85rem;
+  }
+
+  .town-footer-controls {
+    gap: 0.45rem;
+  }
+
+  .town-footer-brands {
+    display: none;
+  }
+
+  .town-system-menu-panel {
+    right: auto;
+    left: 0;
+  }
+
+  .town-footer-resident .town-footer-controls {
+    max-width: 100%;
   }
 }
 

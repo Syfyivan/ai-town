@@ -8,12 +8,7 @@ import {
 } from './gentleTownTiles';
 
 type GardenHotspotProps = {
-  onOpenGarden: () => void;
   tileDim: number;
-};
-
-type GardenHotspotContainer = PIXI.Container & {
-  openGarden?: () => void;
 };
 
 export const GARDEN_REGION = {
@@ -32,7 +27,7 @@ export const GARDEN_PORTAL_REGION = {
 
 function buildGardenSprite(tileDim: number) {
   const width = GARDEN_REGION.width * tileDim;
-  const container = new PIXI.Container() as GardenHotspotContainer;
+  const container = new PIXI.Container();
   const graphics = new PIXI.Graphics();
 
   graphics.beginFill(0x181425, 0.14);
@@ -71,14 +66,6 @@ function buildGardenSprite(tileDim: number) {
   addGentleTile(container, GENTLE_TILES.mushroom, tileDim, 6.4, 4.9);
   addGentleTile(container, GENTLE_TILES.post, tileDim, 3.8, 6.05);
   addGentleTile(container, GENTLE_TILES.post, tileDim, 5.75, 6.05);
-  container.hitArea = new PIXI.Rectangle(
-    (GARDEN_PORTAL_REGION.x - GARDEN_REGION.x) * tileDim,
-    (GARDEN_PORTAL_REGION.y - GARDEN_REGION.y) * tileDim,
-    GARDEN_PORTAL_REGION.width * tileDim,
-    GARDEN_PORTAL_REGION.height * tileDim,
-  );
-  container.eventMode = 'static';
-  container.cursor = 'pointer';
   return container;
 }
 
@@ -87,26 +74,14 @@ export const GardenHotspot = PixiComponent('GardenHotspot', {
     const container = buildGardenSprite(props.tileDim);
     container.x = GARDEN_REGION.x * props.tileDim;
     container.y = GARDEN_REGION.y * props.tileDim;
-    container.openGarden = props.onOpenGarden;
-    container.on('pointerdown', (event: PIXI.FederatedPointerEvent) => {
-      event.stopPropagation();
-    });
-    container.on('pointerup', (event: PIXI.FederatedPointerEvent) => {
-      event.stopPropagation();
-    });
-    container.on('pointertap', (event: PIXI.FederatedPointerEvent) => {
-      event.stopPropagation();
-      container.openGarden?.();
-    });
     return container;
   },
 
   applyProps: (
-    instance: GardenHotspotContainer,
+    instance: PIXI.Container,
     oldProps: GardenHotspotProps,
     newProps: GardenHotspotProps,
   ) => {
-    instance.openGarden = newProps.onOpenGarden;
     if (oldProps.tileDim !== newProps.tileDim) {
       instance.x = GARDEN_REGION.x * newProps.tileDim;
       instance.y = GARDEN_REGION.y * newProps.tileDim;

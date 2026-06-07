@@ -8,12 +8,7 @@ import {
 } from './gentleTownTiles';
 
 type ArtStudioHotspotProps = {
-  onOpenArtStudio: () => void;
   tileDim: number;
-};
-
-type ArtStudioHotspotContainer = PIXI.Container & {
-  openArtStudio?: () => void;
 };
 
 export const ART_STUDIO_REGION = {
@@ -31,7 +26,7 @@ export const ART_STUDIO_PORTAL_REGION = {
 };
 
 function buildArtStudioSprite(tileDim: number) {
-  const container = new PIXI.Container() as ArtStudioHotspotContainer;
+  const container = new PIXI.Container();
   const graphics = new PIXI.Graphics();
 
   graphics.beginFill(0x181425, 0.18);
@@ -60,14 +55,6 @@ function buildArtStudioSprite(tileDim: number) {
   addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 7.1, 5.35);
   addGentleTile(container, GENTLE_TILES.post, tileDim, 3.75, 6.05);
   addGentleTile(container, GENTLE_TILES.post, tileDim, 5.7, 6.05);
-  container.hitArea = new PIXI.Rectangle(
-    (ART_STUDIO_PORTAL_REGION.x - ART_STUDIO_REGION.x) * tileDim,
-    (ART_STUDIO_PORTAL_REGION.y - ART_STUDIO_REGION.y) * tileDim,
-    ART_STUDIO_PORTAL_REGION.width * tileDim,
-    ART_STUDIO_PORTAL_REGION.height * tileDim,
-  );
-  container.eventMode = 'static';
-  container.cursor = 'pointer';
   return container;
 }
 
@@ -76,26 +63,14 @@ export const ArtStudioHotspot = PixiComponent('ArtStudioHotspot', {
     const container = buildArtStudioSprite(props.tileDim);
     container.x = ART_STUDIO_REGION.x * props.tileDim;
     container.y = ART_STUDIO_REGION.y * props.tileDim;
-    container.openArtStudio = props.onOpenArtStudio;
-    container.on('pointerdown', (event: PIXI.FederatedPointerEvent) => {
-      event.stopPropagation();
-    });
-    container.on('pointerup', (event: PIXI.FederatedPointerEvent) => {
-      event.stopPropagation();
-    });
-    container.on('pointertap', (event: PIXI.FederatedPointerEvent) => {
-      event.stopPropagation();
-      container.openArtStudio?.();
-    });
     return container;
   },
 
   applyProps: (
-    instance: ArtStudioHotspotContainer,
+    instance: PIXI.Container,
     oldProps: ArtStudioHotspotProps,
     newProps: ArtStudioHotspotProps,
   ) => {
-    instance.openArtStudio = newProps.onOpenArtStudio;
     if (oldProps.tileDim !== newProps.tileDim) {
       instance.x = ART_STUDIO_REGION.x * newProps.tileDim;
       instance.y = ART_STUDIO_REGION.y * newProps.tileDim;

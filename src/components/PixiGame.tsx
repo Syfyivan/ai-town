@@ -336,18 +336,15 @@ export const PixiGame = (props: {
         onpointerdown={onMapPointerDown}
       />
       <MailboxLayer count={mailboxCount} tileDim={tileDim} />
-      {props.onOpenCinema && <CinemaHotspot tileDim={tileDim} onOpenCinema={props.onOpenCinema} />}
-      {props.onOpenArtStudio && (
-        <ArtStudioHotspot tileDim={tileDim} onOpenArtStudio={props.onOpenArtStudio} />
-      )}
-      {props.onOpenGarden && <GardenHotspot tileDim={tileDim} onOpenGarden={props.onOpenGarden} />}
+      {props.onOpenCinema && <CinemaHotspot tileDim={tileDim} />}
+      {props.onOpenArtStudio && <ArtStudioHotspot tileDim={tileDim} />}
+      {props.onOpenGarden && <GardenHotspot tileDim={tileDim} />}
       {props.onOpenProfession &&
         PROFESSION_BUILDINGS.map((building) => (
           <ProfessionBuildingHotspot
             key={building.profession}
             building={building}
             tileDim={tileDim}
-            onOpenProfession={props.onOpenProfession!}
           />
         ))}
       {players.map(

@@ -1,17 +1,15 @@
 import { PixiComponent, applyDefaultProps } from '@pixi/react';
 import * as PIXI from 'pixi.js';
 import { GENTLE_TILES, addGentlePathPatch, addGentleTile } from './gentleTownTiles';
-import type { ProfessionBuilding, ProfessionId } from './professionCatalog';
+import type { ProfessionBuilding } from './professionCatalog';
 
 type ProfessionBuildingHotspotProps = {
   building: ProfessionBuilding;
-  onOpenProfession: (profession: ProfessionId) => void;
   tileDim: number;
 };
 
 type ProfessionBuildingHotspotContainer = PIXI.Container & {
   building?: ProfessionBuilding;
-  openProfession?: (profession: ProfessionId) => void;
 };
 
 function addPixelHouse(container: PIXI.Container, building: ProfessionBuilding, tileDim: number) {
@@ -85,25 +83,7 @@ function buildProfessionBuildingSprite(building: ProfessionBuilding, tileDim: nu
   addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 1.45, 5.35);
   addGentleTile(container, GENTLE_TILES.flowerYellow, tileDim, 6.95, 5.25);
 
-  container.hitArea = new PIXI.Rectangle(
-    (building.portalRegion.x - building.region.x) * tileDim,
-    (building.portalRegion.y - building.region.y) * tileDim,
-    building.portalRegion.width * tileDim,
-    building.portalRegion.height * tileDim,
-  );
-  container.eventMode = 'static';
-  container.cursor = 'pointer';
   return container;
-}
-
-function openBuilding(container: ProfessionBuildingHotspotContainer, event: PIXI.FederatedEvent) {
-  event.stopPropagation();
-  if (typeof (event as { preventDefault?: () => void }).preventDefault === 'function') {
-    (event as { preventDefault: () => void }).preventDefault();
-  }
-  if (container.building) {
-    container.openProfession?.(container.building.profession);
-  }
 }
 
 export const ProfessionBuildingHotspot = PixiComponent('ProfessionBuildingHotspot', {
@@ -112,19 +92,6 @@ export const ProfessionBuildingHotspot = PixiComponent('ProfessionBuildingHotspo
     container.x = props.building.region.x * props.tileDim;
     container.y = props.building.region.y * props.tileDim;
     container.building = props.building;
-    container.openProfession = props.onOpenProfession;
-    container.on('pointerdown', (event: PIXI.FederatedPointerEvent) => {
-      event.stopPropagation();
-    });
-    container.on('pointerup', (event: PIXI.FederatedPointerEvent) => {
-      event.stopPropagation();
-    });
-    container.on('pointertap', (event: PIXI.FederatedPointerEvent) => {
-      openBuilding(container, event);
-    });
-    container.on('rightclick', (event: PIXI.FederatedPointerEvent) => {
-      openBuilding(container, event);
-    });
     return container;
   },
 
@@ -134,7 +101,6 @@ export const ProfessionBuildingHotspot = PixiComponent('ProfessionBuildingHotspo
     newProps: ProfessionBuildingHotspotProps,
   ) => {
     instance.building = newProps.building;
-    instance.openProfession = newProps.onOpenProfession;
     if (oldProps.tileDim !== newProps.tileDim || oldProps.building !== newProps.building) {
       instance.x = newProps.building.region.x * newProps.tileDim;
       instance.y = newProps.building.region.y * newProps.tileDim;
