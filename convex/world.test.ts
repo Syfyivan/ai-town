@@ -1,5 +1,6 @@
 import {
   ART_STUDIO_SHIFT_DURATION_MS,
+  CAREER_MAX_LEVEL,
   CAREER_WORK_END_HOUR,
   CAREER_WORK_START_HOUR,
   CAREER_SHOP_UNLOCK_XP,
@@ -198,6 +199,14 @@ describe('career helpers', () => {
       'doctor',
     ]);
     expect(jobs[0].workHoursLabel).toBe(`${CAREER_WORK_START_HOUR}:00-${CAREER_WORK_END_HOUR}:00`);
+    expect(jobs.find((job) => job.profession === 'carpenter')).toMatchObject({
+      skillName: '木工等级',
+      level: 1,
+      maxLevel: CAREER_MAX_LEVEL,
+      currentUnlock: '木板和简易修补',
+      nextUnlock: '木箱和储物柜',
+      nextLevelXp: 50,
+    });
   });
 
   test('creates a one-day career work record', () => {
@@ -247,6 +256,18 @@ describe('career helpers', () => {
     )!;
     expect(farmerProgress.canOpenShop).toBe(true);
     expect(farmerProgress.xpToOpenShop).toBe(0);
+  });
+
+  test('caps career tracks at ten levels', () => {
+    const carpenterProgress = summarizeCareerProgress({ carpenter: 999 }).find(
+      (entry) => entry.profession === 'carpenter',
+    )!;
+    expect(carpenterProgress).toMatchObject({
+      skillName: '木工等级',
+      level: CAREER_MAX_LEVEL,
+      nextLevelXp: 0,
+      nextUnlock: undefined,
+    });
   });
 });
 

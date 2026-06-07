@@ -8,25 +8,14 @@ import { waitForInput } from '../hooks/sendInput';
 import { usePlayerSettings } from '../hooks/usePlayerSettings';
 import { useSessionIdentity } from '../hooks/useSessionIdentity';
 import AvatarPreview from './AvatarPreview';
+import type { ProfessionId } from './professionCatalog';
 
 type GardenCropId = 'radish' | 'greens' | 'carrot';
-type ProfessionId =
-  | 'blacksmith'
-  | 'carpenter'
-  | 'farmer'
-  | 'fisher'
-  | 'artist'
-  | 'mage'
-  | 'rancher'
-  | 'tavernKeeper'
-  | 'seedSeller'
-  | 'mayor'
-  | 'scientist'
-  | 'doctor';
 
 const FALLBACK_CAREER_BASE: Array<{
   profession: ProfessionId;
   label: string;
+  skillName: string;
   npcName: string;
   workplace: string;
   title: string;
@@ -37,6 +26,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'blacksmith',
     label: '铁匠',
+    skillName: '锻打等级',
     npcName: '铁匠宋砧',
     workplace: '溪山铁铺',
     title: '整理矿石和打磨工具',
@@ -47,6 +37,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'carpenter',
     label: '木匠',
+    skillName: '木工等级',
     npcName: '木匠闻桐',
     workplace: '木作坊',
     title: '裁木板和修门窗',
@@ -57,6 +48,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'farmer',
     label: '农民',
+    skillName: '园艺等级',
     npcName: '园丁沈梨',
     workplace: '小菜园',
     title: '翻土和照看菜畦',
@@ -67,6 +59,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'fisher',
     label: '渔夫',
+    skillName: '垂钓等级',
     npcName: '渔夫江渚',
     workplace: '溪边码头',
     title: '修网和分拣鱼获',
@@ -77,6 +70,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'artist',
     label: '艺术家',
+    skillName: '绘画等级',
     npcName: '画室顾南星',
     workplace: '溪山画室',
     title: '装裱画框和递颜料',
@@ -87,6 +81,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'mage',
     label: '魔法师',
+    skillName: '魔法等级',
     npcName: '法师岚珀',
     workplace: '星井小塔',
     title: '抄写符文和照看星尘',
@@ -97,6 +92,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'rancher',
     label: '牧民',
+    skillName: '牧养等级',
     npcName: '牧民阿禾',
     workplace: '山坡牧棚',
     title: '喂草料和刷洗棚舍',
@@ -107,6 +103,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'tavernKeeper',
     label: '酒吧老板',
+    skillName: '烹饪等级',
     npcName: '酒馆老板罗麦',
     workplace: '溪山酒馆',
     title: '备菜和招待客人',
@@ -117,6 +114,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'seedSeller',
     label: '种子店老板',
+    skillName: '育种等级',
     npcName: '种子商陆青',
     workplace: '种子店',
     title: '清点种子和打包订单',
@@ -127,6 +125,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'mayor',
     label: '镇长',
+    skillName: '行政等级',
     npcName: '镇长许归',
     workplace: '镇公所',
     title: '整理公告和登记摊位',
@@ -137,6 +136,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'scientist',
     label: '科学家',
+    skillName: '科研等级',
     npcName: '科学家林序',
     workplace: '小镇实验室',
     title: '记录样本和维护仪器',
@@ -147,6 +147,7 @@ const FALLBACK_CAREER_BASE: Array<{
   {
     profession: 'doctor',
     label: '医生',
+    skillName: '医术等级',
     npcName: '医生白芷',
     workplace: '诊所',
     title: '整理药柜和护理病人',
@@ -160,20 +161,29 @@ const FALLBACK_CAREER_JOBS = FALLBACK_CAREER_BASE.map((job) => ({
   ...job,
   workHoursLabel: '10:00-18:00',
   level: 1,
+  maxLevel: 10,
   experience: 0,
   xpToOpenShop: 100,
   canOpenShop: false,
+  currentUnlock: '基础帮工',
+  nextUnlock: '二级制品',
+  nextLevelXp: 50,
 }));
 
 const FALLBACK_CAREER_PROGRESS = FALLBACK_CAREER_BASE.map((job) => ({
   profession: job.profession,
   label: job.label,
+  skillName: job.skillName,
   npcName: job.npcName,
   workplace: job.workplace,
   experience: 0,
   level: 1,
+  maxLevel: 10,
   xpToOpenShop: 100,
   canOpenShop: false,
+  currentUnlock: '基础帮工',
+  nextUnlock: '二级制品',
+  nextLevelXp: 50,
 }));
 
 function formatProgress(progress?: number) {
@@ -539,8 +549,11 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
                 工作时间 {selectedCareerWorkHours} / 消耗能量 {career.energyCost}
               </p>
               <p>
-                Lv.{selectedCareerJob.level} / 距离可开店还差 {selectedCareerJob.xpToOpenShop} 经验
+                {selectedCareerJob.skillName ?? selectedCareerJob.label} Lv.
+                {selectedCareerJob.level}/{selectedCareerJob.maxLevel ?? 10} / 距离可开店还差{' '}
+                {selectedCareerJob.xpToOpenShop} 经验
               </p>
+              <p>当前解锁：{selectedCareerJob.currentUnlock ?? '基础帮工'}</p>
             </div>
           )}
           {career.workedToday && (
@@ -615,6 +628,8 @@ export default function ResidentPanel({ worldId }: { worldId: Id<'worlds'> }) {
               className={`career-pill ${entry.canOpenShop ? 'career-pill-ready' : ''}`}
             >
               {entry.label} Lv.{entry.level} · {entry.experience}
+              <br />
+              {entry.skillName ?? entry.label}
             </span>
           ))}
         </div>

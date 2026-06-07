@@ -11,6 +11,7 @@ import { useHistoricalTime } from '../hooks/useHistoricalTime.ts';
 import { DebugTimeManager } from './DebugTimeManager.tsx';
 import { GameId } from '../../convex/aiTown/ids.ts';
 import { useServerGame } from '../hooks/serverGame.ts';
+import type { ProfessionId } from './professionCatalog.ts';
 
 export const SHOW_DEBUG_UI = !!import.meta.env.VITE_SHOW_DEBUG_UI;
 
@@ -19,6 +20,7 @@ export default function Game(props: {
   onOpenCinema?: () => void;
   onOpenArtStudio?: () => void;
   onOpenGarden?: () => void;
+  onOpenProfession?: (profession: ProfessionId) => void;
 }) {
   const convex = useConvex();
   const [selectedElement, setSelectedElement] = useState<{
@@ -69,6 +71,7 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
                     onOpenCinema={props.onOpenCinema}
                     onOpenArtStudio={props.onOpenArtStudio}
                     onOpenGarden={props.onOpenGarden}
+                    onOpenProfession={props.onOpenProfession}
                     setSelectedElement={setSelectedElement}
                   />
                 </ConvexProvider>

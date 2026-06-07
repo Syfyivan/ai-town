@@ -39,6 +39,8 @@ export const CAREER_WORK_START_HOUR = 10;
 export const CAREER_WORK_END_HOUR = 18;
 export const CAREER_ENERGY_COST = 10;
 export const CAREER_SHOP_UNLOCK_XP = 100;
+export const CAREER_LEVEL_XP = 50;
+export const CAREER_MAX_LEVEL = 10;
 
 export type StudioFocus = 'sketch' | 'color' | 'detail';
 export type GardenCropId = 'radish' | 'greens' | 'carrot';
@@ -218,121 +220,279 @@ const PROFESSION_CONFIG: Record<
   ProfessionId,
   {
     label: string;
+    skillName: string;
     npcName: string;
     workplace: string;
     jobTitle: string;
     description: string;
     payCoins: number;
     xpGain: number;
+    levelUnlocks: string[];
   }
 > = {
   blacksmith: {
     label: '铁匠',
+    skillName: '锻打等级',
     npcName: '铁匠宋砧',
     workplace: '溪山铁铺',
     jobTitle: '整理矿石和打磨工具',
     description: '帮铁匠分拣矿石、磨刀和修农具，适合以后做武器、工具和机械零件。',
     payCoins: 16,
     xpGain: 14,
+    levelUnlocks: [
+      '铜钉和基础修理',
+      '简易矿镐',
+      '铜斧修理',
+      '铁钉和门铰链',
+      '铁制农具维护',
+      '轻型护符底座',
+      '钢制工具升级',
+      '自动浇水阀零件',
+      '精工武器配件',
+      '开设铁铺和接高级订单',
+    ],
   },
   carpenter: {
     label: '木匠',
+    skillName: '木工等级',
     npcName: '木匠闻桐',
     workplace: '木作坊',
     jobTitle: '裁木板和修门窗',
     description: '跟木匠做基础木工，以后可以做家具、扩建房屋和接建造委托。',
     payCoins: 15,
     xpGain: 14,
+    levelUnlocks: [
+      '木板和简易修补',
+      '木箱和储物柜',
+      '木栅栏和小门',
+      '基础家具',
+      '工作台扩建',
+      '温室框架',
+      '店铺柜台',
+      '小屋扩建图纸',
+      '展台和集市摊位',
+      '开设木作坊和承接建筑订单',
+    ],
   },
   farmer: {
     label: '农民',
+    skillName: '园艺等级',
     npcName: '园丁沈梨',
     workplace: '小菜园',
     jobTitle: '翻土和照看菜畦',
     description: '照看作物、学会育苗和轮作，是后续自营农场和作物交易的基础。',
     payCoins: 13,
     xpGain: 12,
+    levelUnlocks: [
+      '翻土和浇水',
+      '萝卜留种',
+      '青菜轮作',
+      '基础肥料',
+      '胡萝卜育苗',
+      '小型温室',
+      '作物分级',
+      '批量播种',
+      '稀有种苗',
+      '经营农场和供货合同',
+    ],
   },
   fisher: {
     label: '渔夫',
+    skillName: '垂钓等级',
     npcName: '渔夫江渚',
     workplace: '溪边码头',
     jobTitle: '修网和分拣鱼获',
     description: '在溪边帮忙修网、分鱼和记潮水，之后可以自己钓鱼、养鱼和卖水产。',
     payCoins: 14,
     xpGain: 13,
+    levelUnlocks: [
+      '修补渔网',
+      '溪鱼分拣',
+      '小鱼竿',
+      '诱饵制作',
+      '鱼篓',
+      '夜钓许可',
+      '鱼塘维护',
+      '稀有鱼记录',
+      '水产加工',
+      '经营渔铺和码头订单',
+    ],
   },
   artist: {
     label: '艺术家',
+    skillName: '绘画等级',
     npcName: '画室顾南星',
     workplace: '溪山画室',
     jobTitle: '装裱画框和递颜料',
     description: '给画室做助手，积累审美和绘画经验，未来可以接肖像、壁画和展览。',
     payCoins: 16,
     xpGain: 15,
+    levelUnlocks: [
+      '画框修补',
+      '素描练习',
+      '调色基础',
+      '肖像小稿',
+      '装裱订单',
+      '店铺招牌画',
+      '壁画草图',
+      '展览布置',
+      '代表作委托',
+      '经营画室和策展项目',
+    ],
   },
   mage: {
     label: '魔法师',
+    skillName: '魔法等级',
     npcName: '法师岚珀',
     workplace: '星井小塔',
     jobTitle: '抄写符文和照看星尘',
     description: '学习基础符文、药粉和小镇异常事件处理，后续可做魔法工具和祝福。',
     payCoins: 17,
     xpGain: 15,
+    levelUnlocks: [
+      '符文抄写',
+      '星尘瓶',
+      '微光护符',
+      '作物祝福',
+      '寻物小咒',
+      '天气占卜',
+      '魔法灯',
+      '传送路标',
+      '高级祝福卷轴',
+      '开设魔法小塔和处理异常委托',
+    ],
   },
   rancher: {
     label: '牧民',
+    skillName: '牧养等级',
     npcName: '牧民阿禾',
     workplace: '山坡牧棚',
     jobTitle: '喂草料和刷洗棚舍',
     description: '帮忙照顾动物，后续可以养牛羊、产奶产毛，也能做牧场订单。',
     payCoins: 14,
     xpGain: 13,
+    levelUnlocks: [
+      '喂草料',
+      '清理棚舍',
+      '基础刷毛',
+      '小型牧栏',
+      '奶桶维护',
+      '羊毛分级',
+      '动物好感照料',
+      '牧草种植',
+      '牧产品加工',
+      '经营牧场和长期供货',
+    ],
   },
   tavernKeeper: {
     label: '酒吧老板',
+    skillName: '烹饪等级',
     npcName: '酒馆老板罗麦',
     workplace: '溪山酒馆',
     jobTitle: '备菜和招待客人',
     description: '在酒馆跑堂、备菜和听消息，未来可以经营餐饮、情报和社交活动。',
     payCoins: 18,
     xpGain: 14,
+    levelUnlocks: [
+      '洗菜和摆盘',
+      '热汤',
+      '烤面包',
+      '简易便当',
+      '酒馆炖菜',
+      '能量餐',
+      '节庆甜点',
+      '宴会菜单',
+      '招牌菜',
+      '经营酒馆和承办宴席',
+    ],
   },
   seedSeller: {
     label: '种子店老板',
+    skillName: '育种等级',
     npcName: '种子商陆青',
     workplace: '种子店',
     jobTitle: '清点种子和打包订单',
     description: '学习种子库存、留种和定价，后续能经营种子、肥料和农业工具。',
     payCoins: 15,
     xpGain: 14,
+    levelUnlocks: [
+      '种子清点',
+      '种子包',
+      '留种记录',
+      '基础肥料配方',
+      '作物目录',
+      '订单打包',
+      '种子品质分级',
+      '稀有种采购',
+      '种子复制机维护',
+      '经营种子店和农业供应链',
+    ],
   },
   mayor: {
     label: '镇长',
+    skillName: '行政等级',
     npcName: '镇长许归',
     workplace: '镇公所',
     jobTitle: '整理公告和登记摊位',
     description: '处理公告、集市摊位和居民委托，为之后治理小镇和公共事件铺路。',
     payCoins: 16,
     xpGain: 13,
+    levelUnlocks: [
+      '公告整理',
+      '摊位登记',
+      '居民档案',
+      '小型活动许可',
+      '公共预算记录',
+      '道路维护委托',
+      '节庆协调',
+      '商铺执照',
+      '小镇规划草案',
+      '参与镇务和大型项目',
+    ],
   },
   scientist: {
     label: '科学家',
+    skillName: '科研等级',
     npcName: '科学家林序',
     workplace: '小镇实验室',
     jobTitle: '记录样本和维护仪器',
     description: '帮科学家做记录、样本和机器维护，后续可发明种子复制机等设备。',
     payCoins: 18,
     xpGain: 16,
+    levelUnlocks: [
+      '样本记录',
+      '仪器清洁',
+      '基础测量',
+      '能量计',
+      '简易自动机',
+      '种子复制机调试',
+      '天气记录仪',
+      '作物分析仪',
+      '镇级工程装置',
+      '经营实验室和发明项目',
+    ],
   },
   doctor: {
     label: '医生',
+    skillName: '医术等级',
     npcName: '医生白芷',
     workplace: '诊所',
     jobTitle: '整理药柜和护理病人',
     description: '在诊所做基础护理和药材整理，未来可以治疗居民、制药和处理突发疾病。',
     payCoins: 17,
     xpGain: 15,
+    levelUnlocks: [
+      '药柜整理',
+      '基础护理',
+      '草药茶',
+      '外伤包扎',
+      '体力药膳',
+      '诊所值班',
+      '疾病预防',
+      '高级药剂',
+      '紧急救护',
+      '经营诊所和公共健康项目',
+    ],
   },
 };
 
@@ -747,7 +907,16 @@ function normalizeProfessionExperience(
 }
 
 function professionLevel(experience: number) {
-  return Math.floor(experience / 50) + 1;
+  return Math.min(CAREER_MAX_LEVEL, Math.floor(experience / CAREER_LEVEL_XP) + 1);
+}
+
+function careerUnlocksForLevel(levelUnlocks: string[], level: number) {
+  const safeLevel = Math.max(1, Math.min(CAREER_MAX_LEVEL, level));
+  return {
+    currentUnlock: levelUnlocks[safeLevel - 1],
+    nextUnlock: safeLevel < CAREER_MAX_LEVEL ? levelUnlocks[safeLevel] : undefined,
+    nextLevelXp: safeLevel < CAREER_MAX_LEVEL ? safeLevel * CAREER_LEVEL_XP : 0,
+  };
 }
 
 function careerWorkHoursLabel() {
@@ -764,12 +933,15 @@ export function summarizeCareerProgress(experience?: Partial<ProfessionExperienc
     return {
       profession: professionId,
       label: config.label,
+      skillName: config.skillName,
       npcName: config.npcName,
       workplace: config.workplace,
       experience: xp,
       level: professionLevel(xp),
+      maxLevel: CAREER_MAX_LEVEL,
       xpToOpenShop: Math.max(0, CAREER_SHOP_UNLOCK_XP - xp),
       canOpenShop: xp >= CAREER_SHOP_UNLOCK_XP,
+      ...careerUnlocksForLevel(config.levelUnlocks, professionLevel(xp)),
     };
   });
 }
@@ -833,10 +1005,15 @@ export function previewCareerJobs(experience?: Partial<ProfessionExperience>) {
       payCoins: config.payCoins,
       xpGain: config.xpGain,
       workHoursLabel: careerWorkHoursLabel(),
+      skillName: config.skillName,
       level: progress.level,
+      maxLevel: progress.maxLevel,
       experience: progress.experience,
       xpToOpenShop: progress.xpToOpenShop,
       canOpenShop: progress.canOpenShop,
+      currentUnlock: progress.currentUnlock,
+      nextUnlock: progress.nextUnlock,
+      nextLevelXp: progress.nextLevelXp,
     };
   });
 }
@@ -1677,8 +1854,13 @@ export const workCareerDay = mutation({
     return {
       ...dayWork,
       label: PROFESSION_CONFIG[args.profession].label,
+      skillName: PROFESSION_CONFIG[args.profession].skillName,
       experience: progress.experience,
       level: progress.level,
+      maxLevel: progress.maxLevel,
+      currentUnlock: progress.currentUnlock,
+      nextUnlock: progress.nextUnlock,
+      nextLevelXp: progress.nextLevelXp,
       canOpenShop: progress.canOpenShop,
       totalJobs: (careerProfile?.totalJobs ?? 0) + 1,
       totalCoinsEarned: (careerProfile?.totalCoinsEarned ?? 0) + dayWork.payCoins,
@@ -1837,11 +2019,16 @@ export const finishCareerShift = mutation({
     return {
       profession: careerProfile.activeJob.profession,
       label: PROFESSION_CONFIG[careerProfile.activeJob.profession].label,
+      skillName: PROFESSION_CONFIG[careerProfile.activeJob.profession].skillName,
       title: careerProfile.activeJob.title,
       payCoins: careerProfile.activeJob.payCoins,
       xpGain: careerProfile.activeJob.xpGain,
       experience: progress.experience,
       level: progress.level,
+      maxLevel: progress.maxLevel,
+      currentUnlock: progress.currentUnlock,
+      nextUnlock: progress.nextUnlock,
+      nextLevelXp: progress.nextLevelXp,
       canOpenShop: progress.canOpenShop,
     };
   },

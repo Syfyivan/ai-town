@@ -21,6 +21,8 @@ import { useSessionIdentity } from '../hooks/useSessionIdentity.ts';
 import { Point } from '../../convex/util/types.ts';
 import { usePlayerSettings } from '../hooks/usePlayerSettings.ts';
 import { MailboxLayer } from './MailboxLayer.tsx';
+import { ProfessionBuildingHotspot } from './ProfessionBuildingHotspot.tsx';
+import { PROFESSION_BUILDINGS, ProfessionId } from './professionCatalog.ts';
 
 type TileRegion = { x: number; y: number; width: number; height: number };
 
@@ -54,6 +56,7 @@ export const PixiGame = (props: {
   onOpenCinema?: () => void;
   onOpenArtStudio?: () => void;
   onOpenGarden?: () => void;
+  onOpenProfession?: (profession: ProfessionId) => void;
   setSelectedElement: SelectElement;
 }) => {
   // PIXI setup.
@@ -205,6 +208,14 @@ export const PixiGame = (props: {
 
       if (key === 'x') {
         event.preventDefault();
+        const professionBuilding = PROFESSION_BUILDINGS.find(
+          (building) =>
+            props.onOpenProfession && nearRegion(humanPlayer.position, building.portalRegion),
+        );
+        if (professionBuilding) {
+          props.onOpenProfession?.(professionBuilding.profession);
+          return;
+        }
         if (props.onOpenArtStudio && nearRegion(humanPlayer.position, ART_STUDIO_PORTAL_REGION)) {
           props.onOpenArtStudio();
           return;
@@ -237,6 +248,7 @@ export const PixiGame = (props: {
     props.onOpenArtStudio,
     props.onOpenCinema,
     props.onOpenGarden,
+    props.onOpenProfession,
     props.setSelectedElement,
     settings.movementMode,
   ]);
@@ -275,6 +287,12 @@ export const PixiGame = (props: {
         open: props.onOpenCinema,
         region: CINEMA_PORTAL_REGION,
       },
+      ...PROFESSION_BUILDINGS.map((building) => ({
+        open: props.onOpenProfession
+          ? () => props.onOpenProfession?.(building.profession)
+          : undefined,
+        region: building.portalRegion,
+      })),
     ];
     const portal = portals.find(
       (candidate) =>
@@ -289,6 +307,7 @@ export const PixiGame = (props: {
     props.onOpenArtStudio,
     props.onOpenCinema,
     props.onOpenGarden,
+    props.onOpenProfession,
   ]);
 
   // Zoom on the user’s avatar when it is created
@@ -322,6 +341,15 @@ export const PixiGame = (props: {
         <ArtStudioHotspot tileDim={tileDim} onOpenArtStudio={props.onOpenArtStudio} />
       )}
       {props.onOpenGarden && <GardenHotspot tileDim={tileDim} onOpenGarden={props.onOpenGarden} />}
+      {props.onOpenProfession &&
+        PROFESSION_BUILDINGS.map((building) => (
+          <ProfessionBuildingHotspot
+            key={building.profession}
+            building={building}
+            tileDim={tileDim}
+            onOpenProfession={props.onOpenProfession!}
+          />
+        ))}
       {players.map(
         (p) =>
           // Only show the path for the human player in non-debug mode.
