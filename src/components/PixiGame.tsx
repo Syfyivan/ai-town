@@ -23,6 +23,7 @@ import { usePlayerSettings } from '../hooks/usePlayerSettings.ts';
 import { MailboxLayer } from './MailboxLayer.tsx';
 import { ProfessionBuildingHotspot } from './ProfessionBuildingHotspot.tsx';
 import { PROFESSION_BUILDINGS, ProfessionId } from './professionCatalog.ts';
+import { FARM_ROAD_EXIT_REGION, FarmRoadHotspot } from './FarmRoadHotspot.tsx';
 
 type TileRegion = { x: number; y: number; width: number; height: number };
 
@@ -40,10 +41,6 @@ function tilePosition(position: Point) {
     x: Math.floor(position.x),
     y: Math.floor(position.y),
   };
-}
-
-function positionKey(position: Point) {
-  return `${Math.floor(position.x)}:${Math.floor(position.y)}`;
 }
 
 export const PixiGame = (props: {
@@ -76,7 +73,6 @@ export const PixiGame = (props: {
 
   const moveTo = useSendInput(props.engineId, 'moveTo');
   const lastKeyboardMoveAt = useRef(0);
-  const previousPortalPositionRef = useRef<string | null>(null);
 
   // Interaction for clicking on the world to navigate.
   const dragStart = useRef<{ screenX: number; screenY: number } | null>(null);
@@ -197,6 +193,14 @@ export const PixiGame = (props: {
           return;
         }
         lastKeyboardMoveAt.current = now;
+        if (
+          props.onOpenGarden &&
+          pointInRegion(tilePosition(humanPlayer.position), FARM_ROAD_EXIT_REGION) &&
+          (movement[key].x > 0 || movement[key].y > 0)
+        ) {
+          props.onOpenGarden();
+          return;
+        }
         const destination = {
           x: Math.floor(humanPlayer.position.x + movement[key].x),
           y: Math.floor(humanPlayer.position.y + movement[key].y),
@@ -253,63 +257,6 @@ export const PixiGame = (props: {
     settings.movementMode,
   ]);
 
-  useEffect(() => {
-    if (!humanPlayerId) {
-      previousPortalPositionRef.current = null;
-      return;
-    }
-    const humanPlayer = props.game.world.players.get(humanPlayerId);
-    if (!humanPlayer) {
-      previousPortalPositionRef.current = null;
-      return;
-    }
-
-    const currentPosition = tilePosition(humanPlayer.position);
-    const currentKey = positionKey(currentPosition);
-    const previousKey = previousPortalPositionRef.current;
-    previousPortalPositionRef.current = currentKey;
-    if (!previousKey || previousKey === currentKey) {
-      return;
-    }
-
-    const [previousX, previousY] = previousKey.split(':').map(Number);
-    const previousPosition = { x: previousX, y: previousY };
-    const portals = [
-      {
-        open: props.onOpenArtStudio,
-        region: ART_STUDIO_PORTAL_REGION,
-      },
-      {
-        open: props.onOpenGarden,
-        region: GARDEN_PORTAL_REGION,
-      },
-      {
-        open: props.onOpenCinema,
-        region: CINEMA_PORTAL_REGION,
-      },
-      ...PROFESSION_BUILDINGS.map((building) => ({
-        open: props.onOpenProfession
-          ? () => props.onOpenProfession?.(building.profession)
-          : undefined,
-        region: building.portalRegion,
-      })),
-    ];
-    const portal = portals.find(
-      (candidate) =>
-        candidate.open &&
-        pointInRegion(currentPosition, candidate.region) &&
-        !pointInRegion(previousPosition, candidate.region),
-    );
-    portal?.open?.();
-  }, [
-    humanPlayerId,
-    props.game.world.players,
-    props.onOpenArtStudio,
-    props.onOpenCinema,
-    props.onOpenGarden,
-    props.onOpenProfession,
-  ]);
-
   // Zoom on the user’s avatar when it is created
   useEffect(() => {
     if (!viewportRef.current || humanPlayerId === undefined) return;
@@ -336,6 +283,7 @@ export const PixiGame = (props: {
         onpointerdown={onMapPointerDown}
       />
       <MailboxLayer count={mailboxCount} tileDim={tileDim} />
+      {props.onOpenGarden && <FarmRoadHotspot tileDim={tileDim} />}
       {props.onOpenCinema && <CinemaHotspot tileDim={tileDim} />}
       {props.onOpenArtStudio && <ArtStudioHotspot tileDim={tileDim} />}
       {props.onOpenGarden && <GardenHotspot tileDim={tileDim} />}

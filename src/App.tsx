@@ -21,6 +21,7 @@ import GardenOverlay from './components/GardenOverlay.tsx';
 import { useResidentPresence } from './hooks/useResidentPresence.ts';
 import ProfessionWorkOverlay from './components/ProfessionWorkOverlay.tsx';
 import { ProfessionId } from './components/professionCatalog.ts';
+import TownHud from './components/TownHud.tsx';
 
 type TownScene = 'town' | 'studio' | 'garden' | 'profession';
 
@@ -34,7 +35,8 @@ export default function Home() {
   const [scene, setScene] = useState<TownScene>('town');
   const [professionScene, setProfessionScene] = useState<ProfessionId>('carpenter');
   const { isResident } = useResidentPresence();
-  const townIsImmersive = scene === 'town' && isResident;
+  const residentGameMode = isResident;
+  const townIsImmersive = scene === 'town' && residentGameMode;
   const openProfession = (profession: ProfessionId) => {
     setProfessionScene(profession);
     setScene('profession');
@@ -68,8 +70,9 @@ export default function Home() {
           <p className="text-2xl mt-2">操作</p>
           <p className="mt-4">点击地图可以移动你的角色。</p>
           <p className="mt-4">
-            也可以用 WASD 或方向键移动；沿着小路走到画室、菜园、影院入口会自动进入，靠近入口时按 X
-            也可以手动进入，按 Z 停止移动或取消查看。进入画室后，WASD 移动到工作站，X
+            也可以用 WASD 或方向键移动；沿着小路走到农场路口后继续向前，或按 X
+            进入小菜园。靠近画室、影院和职业建筑门口时按 X 进入，按 Z
+            停止移动或取消查看。进入画室后，WASD 移动到工作站，X
             开工或领取工资。进入菜园后，WASD 在田里移动，X 播种、浇水或收获，Z
             切换种子。进入木作坊、铁铺、星井小塔或酒馆后，走到接待桌前按
             X，或右键桌上的白纸，确认报名 10:00-18:00 的一天临时工。
@@ -93,7 +96,7 @@ export default function Home() {
         </Unauthenticated>
       </div> */}
 
-      <div className={`town-app-shell ${townIsImmersive ? 'town-app-shell-resident' : ''}`}>
+      <div className={`town-app-shell ${residentGameMode ? 'town-app-shell-resident' : ''}`}>
         {scene === 'town' && !townIsImmersive && (
           <>
             <header className="town-hero">
@@ -119,6 +122,13 @@ export default function Home() {
             onOpenProfession={openProfession}
           />
         )}
+        {townIsImmersive && (
+          <TownHud
+            onOpenHelp={() => setHelpModalOpen(true)}
+            onOpenNpcManager={() => setNpcManagerOpen(true)}
+            onOpenObservatory={() => setObservatoryOpen(true)}
+          />
+        )}
 
         {scene === 'studio' && <ArtStudioOverlay open onClose={() => setScene('town')} />}
         {scene === 'garden' && <GardenOverlay open onClose={() => setScene('town')} />}
@@ -130,8 +140,8 @@ export default function Home() {
           />
         )}
 
-        {scene === 'town' && (
-          <footer className={`town-footer ${townIsImmersive ? 'town-footer-resident' : ''}`}>
+        {scene === 'town' && !townIsImmersive && (
+          <footer className="town-footer">
             <div className="town-footer-controls">
               <FreezeButton />
               <MusicButton />

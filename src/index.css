@@ -91,7 +91,7 @@ body {
 }
 
 .town-app-shell-resident {
-  padding: 0.75rem;
+  padding: 0;
 }
 
 .town-hero {
@@ -267,6 +267,183 @@ body {
   max-width: none;
 }
 
+.town-game-frame-fullscreen {
+  border: 0;
+  height: 100%;
+  margin: 0;
+  max-width: none;
+  width: 100%;
+}
+
+.town-game-frame-fullscreen > .relative {
+  height: 100%;
+  min-height: 0;
+}
+
+.town-stage-container {
+  height: 100%;
+  width: 100%;
+}
+
+.town-hud {
+  display: flex;
+  gap: 0.75rem;
+  inset: 0.75rem 0.75rem auto;
+  justify-content: space-between;
+  pointer-events: none;
+  position: absolute;
+  z-index: 11;
+}
+
+.town-hud-left {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.town-hud-panel {
+  background: rgba(24, 20, 37, 0.78);
+  border: 4px solid rgba(7, 8, 18, 0.92);
+  box-shadow: 0 6px 0 rgba(7, 8, 18, 0.4);
+  color: #ffffff;
+  pointer-events: auto;
+}
+
+.town-hud-profile {
+  min-width: 10rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.town-hud-profile p,
+.town-hud-status p,
+.town-hud-energy span {
+  color: #ead4aa;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.town-hud-profile strong {
+  display: block;
+  font-size: 1.1rem;
+  line-height: 1.05;
+  margin-top: 0.25rem;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.town-hud-profile span {
+  color: #fec742;
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 0.25rem;
+}
+
+.town-hud-status {
+  align-items: center;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: auto auto minmax(120px, 160px);
+  padding: 0.55rem 0.75rem;
+}
+
+.town-hud-status strong {
+  color: #fec742;
+  display: block;
+  font-family: 'Upheaval Pro', 'sans-serif';
+  font-size: 1.6rem;
+  line-height: 1;
+  margin-top: 0.25rem;
+}
+
+.town-hud-status-meta {
+  color: #ead4aa;
+  display: grid;
+  font-size: 0.75rem;
+  gap: 0.18rem;
+  line-height: 1.1;
+}
+
+.town-hud-energy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.town-hud-energy strong {
+  color: #ffffff;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.town-hud-energy .life-energy-bar {
+  height: 14px;
+}
+
+.life-energy-bar i {
+  background: linear-gradient(90deg, #6abe30, #fec742);
+  display: block;
+  height: 100%;
+  transition: width 180ms ease;
+}
+
+.town-hud-menu {
+  color: #ffffff;
+  pointer-events: auto;
+  position: relative;
+}
+
+.town-hud-menu summary {
+  background: rgba(58, 68, 102, 0.92);
+  border: 4px solid #181425;
+  box-shadow: 0 6px 0 rgba(7, 8, 18, 0.35);
+  cursor: pointer;
+  display: block;
+  line-height: 1;
+  min-width: 4.6rem;
+  padding: 0.65rem 0.75rem;
+  text-align: center;
+  user-select: none;
+}
+
+.town-hud-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.town-hud-menu-panel {
+  background: rgba(35, 38, 58, 0.98);
+  border: 4px solid #181425;
+  display: grid;
+  gap: 0.45rem;
+  left: 0;
+  min-width: 12rem;
+  padding: 0.55rem;
+  position: absolute;
+  top: calc(100% + 0.5rem);
+}
+
+.town-hud-menu-panel label {
+  color: #ead4aa;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.town-hud-menu-panel select,
+.town-hud-menu-panel button {
+  background: #fffaf1;
+  border: 3px solid #181425;
+  color: #181425;
+  min-height: 38px;
+  padding: 0.35rem 0.55rem;
+  text-align: left;
+}
+
+.town-hud-menu-panel button {
+  background: #3a4466;
+  color: #ffffff;
+}
+
 .town-side-panel {
   background: #743f39;
   border-top: 8px solid #181425;
@@ -347,6 +524,29 @@ body {
   .town-footer-resident .town-footer-controls {
     max-width: 100%;
   }
+
+  .town-hud {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.45rem;
+    inset: 0.5rem 0.5rem auto;
+  }
+
+  .town-hud-left {
+    justify-content: space-between;
+  }
+
+  .town-hud-status {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .town-hud-status-meta {
+    display: none;
+  }
+
+  .town-hud-profile {
+    min-width: 0;
+  }
 }
 
 @media screen and (min-width: 1024px) {
@@ -355,7 +555,7 @@ body {
   }
 
   .town-app-shell-resident {
-    padding: 0.75rem;
+    padding: 0;
   }
 
   .town-game-frame {
@@ -569,6 +769,16 @@ p[contenteditable='true']:empty::before {
   width: 100%;
 }
 
+.town-app-shell-resident .scene-page {
+  border: 0;
+  box-shadow: none;
+  max-width: none;
+}
+
+.town-app-shell-resident .scene-header {
+  padding: 0.8rem 1rem;
+}
+
 .scene-header {
   align-items: flex-start;
   background: #3a4466;
@@ -611,6 +821,25 @@ p[contenteditable='true']:empty::before {
 
 .scene-main > .scene-card {
   margin-top: 0.75rem;
+}
+
+.scene-page-garden {
+  background:
+    linear-gradient(rgba(24, 20, 37, 0.2), rgba(24, 20, 37, 0.28)),
+    radial-gradient(circle at 18% 18%, rgba(153, 229, 80, 0.14), transparent 24rem), #314a34;
+}
+
+.scene-page-garden .scene-header {
+  background: rgba(58, 68, 102, 0.88);
+}
+
+.scene-page-garden .scene-main {
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.scene-page-garden .scene-card {
+  background: rgba(24, 20, 37, 0.7);
 }
 
 .studio-room {
@@ -663,9 +892,16 @@ p[contenteditable='true']:empty::before {
 }
 
 .garden-board {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), #5b6b34;
-  background-size: 26px 26px;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(153, 229, 80, 0.24) 0 2px, transparent 3px),
+    radial-gradient(circle at 72% 68%, rgba(106, 190, 48, 0.2) 0 2px, transparent 3px),
+    linear-gradient(90deg, rgba(24, 20, 37, 0.12) 1px, transparent 1px),
+    linear-gradient(rgba(24, 20, 37, 0.12) 1px, transparent 1px), #5b6b34;
+  background-size:
+    76px 76px,
+    96px 96px,
+    32px 32px,
+    32px 32px;
   border: 6px solid #181425;
   display: grid;
   flex: 1 1 0;
@@ -679,7 +915,7 @@ p[contenteditable='true']:empty::before {
 
 .garden-tile {
   align-items: center;
-  background: #8f563b;
+  background: rgba(67, 93, 43, 0.92);
   border: 4px solid #181425;
   color: #ffffff;
   display: flex;
@@ -692,8 +928,9 @@ p[contenteditable='true']:empty::before {
 }
 
 .garden-ground {
-  background: radial-gradient(circle at 30% 35%, rgba(153, 229, 80, 0.22) 0 18%, transparent 19%),
-    #5b6b34;
+  background:
+    radial-gradient(circle at 32% 35%, rgba(153, 229, 80, 0.2) 0 18%, transparent 19%),
+    #556f33;
 }
 
 .garden-tile-active {
@@ -891,18 +1128,50 @@ p[contenteditable='true']:empty::before {
   border: 4px solid #181425;
   background: #8f563b;
   box-shadow: inset 0 -8px 0 rgba(24, 20, 37, 0.18);
+  image-rendering: pixelated;
+  position: relative;
 }
 
 .garden-soil[data-phase='planted'] {
-  background: linear-gradient(135deg, transparent 0 35%, #6abe30 35% 52%, transparent 52%), #8f563b;
+  background: #8f563b;
 }
 
 .garden-soil[data-phase='watered'] {
-  background: linear-gradient(135deg, transparent 0 28%, #99e550 28% 46%, transparent 46%), #5b6b34;
+  background: #6f563f;
 }
 
 .garden-soil[data-phase='ready'] {
-  background: linear-gradient(135deg, transparent 0 22%, #fec742 22% 42%, transparent 42%), #6abe30;
+  background: #6f563f;
+}
+
+.garden-soil::after {
+  background-image: url('/ai-town/assets/farm-life/sprites/crops.png');
+  background-repeat: no-repeat;
+  background-size: 128px 960px;
+  content: '';
+  display: none;
+  height: 32px;
+  image-rendering: pixelated;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -62%) scale(1.4);
+  width: 32px;
+}
+
+.garden-soil[data-phase='planted']::after {
+  background-position: -32px 0;
+  display: block;
+}
+
+.garden-soil[data-phase='watered']::after {
+  background-position: -64px 0;
+  display: block;
+}
+
+.garden-soil[data-phase='ready']::after {
+  background-position: -96px 0;
+  display: block;
 }
 
 .garden-rank {
