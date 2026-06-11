@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>画家工会</title>
+    <meta name="description" content="画家工会像素经营原型。" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="guild-app" aria-label="画家工会">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="画家工会">
+          <span class="brand-mark" aria-hidden="true">画</span>
+          <span>画家工会</span>
+        </a>
+        <div class="hud" aria-live="polite">
+          <span><b id="dayLabel">第 1 天</b></span>
+          <span>金币 <b id="coinLabel">120</b></span>
+          <span>工钱 <b id="wageLabel">0</b></span>
+          <span>颜料 <b id="paintLabel">54/90</b></span>
+          <span>声望 <b id="prestigeLabel">8</b></span>
+        </div>
+        <div class="top-actions">
+          <button class="icon-button" id="pauseButton" type="button" aria-label="暂停" title="暂停">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M8 5v14M16 5v14" />
+            </svg>
+          </button>
+          <button class="icon-button" id="speedButton" type="button" aria-label="切换速度" title="切换速度">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M4 12h9M13 6l6 6-6 6" />
+            </svg>
+          </button>
+          <button class="icon-button" id="resetButton" type="button" aria-label="重新开始" title="重新开始">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M3 12a9 9 0 1 0 3-6.7" />
+              <path d="M3 4v6h6" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="game-shell">
+        <section class="stage-panel" aria-label="画室">
+          <div class="stage-head">
+            <div>
+              <span class="kicker">Guild Room</span>
+              <h1>学徒日班</h1>
+            </div>
+            <div class="status-chip" id="clockLabel">08:00</div>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="guildCanvas" width="1100" height="680" tabindex="0" aria-label="画家工会画室，WASD 移动，X 或鼠标右键操作"></canvas>
+          </div>
+          <div class="mode-dock" aria-label="作画方式">
+            <button type="button" data-mode="fast">快画</button>
+            <button type="button" data-mode="steady">稳画</button>
+            <button type="button" data-mode="detail">精修</button>
+            <button type="button" data-command="rest">休息</button>
+            <button type="button" data-command="study">学习</button>
+            <button type="button" data-command="mix">调色</button>
+          </div>
+        </section>
+
+        <aside class="side-panel" aria-label="经营面板">
+          <section class="panel-block">
+            <div class="panel-heading">
+              <h2>订单</h2>
+              <button class="small-button" id="newOrderButton" type="button">新订单</button>
+            </div>
+            <div class="order-list" id="orderList"></div>
+          </section>
+
+          <section class="panel-block">
+            <div class="panel-heading">
+              <h2>画家</h2>
+              <span id="selectedLabel">我 · 学徒</span>
+            </div>
+            <div class="painter-list" id="painterList"></div>
+          </section>
+
+          <section class="panel-block">
+            <div class="panel-heading">
+              <h2>作品</h2>
+              <span id="artCountLabel">0</span>
+            </div>
+            <div class="art-strip" id="artStrip"></div>
+          </section>
+
+          <section class="panel-block log-block">
+            <div class="panel-heading">
+              <h2>工会记录</h2>
+            </div>
+            <div class="event-log" id="eventLog" aria-live="polite"></div>
+          </section>
+        </aside>
+      </section>
+    </main>
+    <script src="./game.js"></script>
+  </body>
+</html>

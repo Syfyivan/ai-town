@@ -842,6 +842,27 @@ p[contenteditable='true']:empty::before {
   background: rgba(24, 20, 37, 0.7);
 }
 
+.painters-guild-scene {
+  background: #171c21;
+}
+
+.painters-guild-header {
+  flex: 0 0 auto;
+}
+
+.painters-guild-frame-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.painters-guild-frame {
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
 .studio-room {
   --room-cell: minmax(112px, 1fr);
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
