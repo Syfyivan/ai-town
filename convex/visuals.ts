@@ -1,6 +1,6 @@
 import { v } from 'convex/values';
 import { ActionCtx, action, internalMutation, query } from './_generated/server';
-import { internal } from './_generated/api';
+import { api, internal } from './_generated/api';
 
 const rectValidator = v.object({
   x: v.number(),
@@ -122,9 +122,23 @@ export const generateNextNode = action({
     sessionId: v.string(),
     parent: v.optional(parentNodeValidator),
     hotspot: v.optional(hotspotValidator),
+    // Free-form subject resolved by the vision model from a click on the previous
+    // frame. When present we follow it instead of the hand-authored hotspot tree.
+    subject: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<GeneratedNode> => {
-    const node = buildNextNode(args.parent, args.hotspot);
+    let node =
+      args.parent && args.subject
+        ? buildSubjectNode(args.parent, args.subject)
+        : buildNextNode(args.parent, args.hotspot);
+    // World-grounding: the root panorama reflects what is actually happening in the
+    // running town right now, so the spyglass shows a real world, not a hallucination.
+    if (!args.parent) {
+      const townContext = await loadTownContext(ctx);
+      if (townContext) {
+        node = { ...node, prompt: `${node.prompt} 此刻镇上的真实状况：${townContext}` };
+      }
+    }
     const image = await generateImage(ctx, node);
     const generatedNode = {
       ...node,
@@ -139,20 +153,150 @@ export const generateNextNode = action({
   },
 });
 
+// ---------------------------------------------------------------------------
+// True-Flipbook click resolution: turn a click coordinate into a semantic
+// subject by asking a vision model what is at that point. This uses a dedicated
+// vision endpoint (VISION_API_URL / VISION_MODEL / VISION_API_KEY) so it stays
+// decoupled from the town's main chat LLM (which may be a non-vision Ollama model).
+// When unconfigured it returns null and the frontend falls back to the hotspot tree.
+// ---------------------------------------------------------------------------
+
+function getVisionConfig() {
+  const url = process.env.VISION_API_URL;
+  const model = process.env.VISION_MODEL;
+  if (!url || !model) {
+    return null;
+  }
+  return { url: url.replace(/\/$/, ''), model, apiKey: process.env.VISION_API_KEY };
+}
+
+export const resolveClick = action({
+  args: {
+    imageUrl: v.string(),
+    x: v.number(),
+    y: v.number(),
+    title: v.string(),
+    path: v.array(v.string()),
+  },
+  handler: async (_ctx, args): Promise<{ subject: string } | null> => {
+    const config = getVisionConfig();
+    if (!config) {
+      return null;
+    }
+    try {
+      const response = await fetch(`${config.url}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          model: config.model,
+          temperature: 0.2,
+          max_tokens: 32,
+          messages: [
+            {
+              role: 'system',
+              content:
+                '你在看一张溪山镇的画面。用户点击了画面上的某个位置（坐标已归一化到 0~1，左上角为原点）。' +
+                '请用一个不超过 12 个汉字的中文名词短语，描述那个位置上最显眼的东西，作为继续放大探索的主体。' +
+                '只输出这个短语本身，不要加引号、标点或解释。',
+            },
+            {
+              role: 'user',
+              content: [
+                { type: 'image_url', image_url: { url: args.imageUrl } },
+                {
+                  type: 'text',
+                  text:
+                    `当前画面：「${args.title}」。点击位置 x=${args.x.toFixed(3)}, y=${args.y.toFixed(3)}。` +
+                    `已走过的探索路径：${args.path.join(' → ') || '（这是起点）'}。`,
+                },
+              ],
+            },
+          ],
+        }),
+      });
+      if (!response.ok) {
+        console.warn('resolveClick vision call failed', response.status, await response.text());
+        return null;
+      }
+      const json = (await response.json()) as {
+        choices?: { message?: { content?: string } }[];
+      };
+      const raw = json.choices?.[0]?.message?.content?.trim();
+      if (!raw) {
+        return null;
+      }
+      const subject = raw.replace(/^["'“”「」]+|["'“”「」]+$/g, '').slice(0, 24);
+      return subject ? { subject } : null;
+    } catch (error) {
+      console.warn('resolveClick error', error);
+      return null;
+    }
+  },
+});
+
+async function loadTownContext(ctx: ActionCtx): Promise<string | undefined> {
+  try {
+    const status = await ctx.runQuery(api.world.defaultWorldStatus, {});
+    if (!status) {
+      return undefined;
+    }
+    const observatory = await ctx.runQuery(api.world.townObservatory, {
+      worldId: status.worldId,
+    });
+    const activities = (observatory.activeActivities ?? [])
+      .slice(0, 4)
+      .map((activity) => `${activity.player}正在${activity.description}`);
+    const memories = (observatory.recentMemories ?? [])
+      .slice(0, 3)
+      .map((memory) => `${memory.owner}：${memory.description}`);
+    const parts = [...activities, ...memories].filter(Boolean);
+    if (!parts.length) {
+      return undefined;
+    }
+    return parts.join('；').slice(0, 300);
+  } catch (error) {
+    console.warn('loadTownContext failed', error);
+    return undefined;
+  }
+}
+
+function buildSubjectNode(parent: ParentNode, subject: string): GeneratedNode {
+  const depth = parent.depth + 1;
+  const safeSubject = subject.slice(0, 24);
+  return {
+    nodeId: `${parent.nodeId}-vlm-${depth}`,
+    parentNodeId: parent.nodeId,
+    title: safeSubject,
+    prompt:
+      `放大并深入“${safeSubject}”，把它展开成下一层更近、更具体的可探索场景。` +
+      `保持来自上一层“${parent.title}”的视觉连续性。`,
+    depth,
+    styleAnchor: parent.styleAnchor,
+    hotspots: [
+      makeHotspot('left-detail', '左侧', 'object', { x: 0.12, y: 0.34, w: 0.22, h: 0.28 }),
+      makeHotspot('center-detail', '中心', 'object', { x: 0.4, y: 0.3, w: 0.24, h: 0.34 }),
+      makeHotspot('right-detail', '右侧', 'object', { x: 0.7, y: 0.4, w: 0.18, h: 0.26 }),
+    ],
+  };
+}
+
 function buildNextNode(parent?: ParentNode, selectedHotspot?: VisualHotspot): GeneratedNode {
   if (!parent || !selectedHotspot) {
     return {
       nodeId: 'town-overview',
       title: '溪山镇全景',
       prompt:
-        '溪山镇全景，画面中有居民家、河边小桥、市集、电影院和通往山里的小路，适合作为可点击探索地图。',
+        '溪山镇全景，画面中有居民家、河边小桥、市集、山坡上的观景台和通往山里的小路，适合作为可点击探索地图。',
       depth: 0,
       styleAnchor: ROOT_STYLE,
       hotspots: [
         makeHotspot('resident-house', '居民家', 'house', { x: 0.12, y: 0.36, w: 0.22, h: 0.34 }),
         makeHotspot('riverside', '河边小桥', 'river', { x: 0.39, y: 0.55, w: 0.25, h: 0.22 }),
         makeHotspot('market', '市集', 'market', { x: 0.65, y: 0.4, w: 0.22, h: 0.28 }),
-        makeHotspot('cinema', '电影院', 'cinema', { x: 0.76, y: 0.18, w: 0.16, h: 0.18 }),
+        makeHotspot('spyglass', '观景台', 'spyglass', { x: 0.76, y: 0.18, w: 0.16, h: 0.18 }),
         makeHotspot('mountain-road', '山路', 'road', { x: 0.03, y: 0.62, w: 0.22, h: 0.26 }),
       ],
     };
@@ -191,7 +335,7 @@ function nextPromptFor(label: string, kind: string) {
     furniture: `仔细观察${label}，看到纹理、摆件、抽屉和被使用过的痕迹`,
     river: `沿着${label}靠近水面，看到倒影、桥洞和漂浮的灯`,
     market: `进入${label}，看到摊位、商品、招牌和小镇居民留下的物品`,
-    cinema: `进入${label}，看到售票窗、海报墙、放映厅入口和发光银幕`,
+    spyglass: `登上${label}，看到望远镜、星图、栏杆和俯瞰小镇的视野`,
     road: `沿着${label}前进，看到石阶、草丛、路牌和远处山门`,
     object: `继续放大${label}，把它展开成下一层可探索场景`,
   };
@@ -260,14 +404,14 @@ function buildSemanticChild(
       ],
     };
   }
-  if (selectedHotspot.kind === 'cinema') {
+  if (selectedHotspot.kind === 'spyglass') {
     return {
-      title: `${selectedHotspot.label}门厅`,
-      prompt: '进入电影院门厅，墙上有电影海报、售票窗、放映厅入口和一台老式放映机。',
+      title: `${selectedHotspot.label}观测平台`,
+      prompt: '登上观景台平台，看到一架黄铜望远镜、墙上的星图、木栏杆和俯瞰整座溪山镇的视野。',
       hotspots: [
-        makeHotspot('screen-door', '放映厅入口', 'door', { x: 0.42, y: 0.22, w: 0.2, h: 0.44 }),
-        makeHotspot('poster-wall', '海报墙', 'object', { x: 0.12, y: 0.22, w: 0.22, h: 0.3 }),
-        makeHotspot('projector', '老式放映机', 'object', { x: 0.68, y: 0.48, w: 0.2, h: 0.2 }),
+        makeHotspot('telescope', '黄铜望远镜', 'object', { x: 0.42, y: 0.22, w: 0.2, h: 0.44 }),
+        makeHotspot('star-map', '星图', 'object', { x: 0.12, y: 0.22, w: 0.22, h: 0.3 }),
+        makeHotspot('overlook', '俯瞰小镇的视野', 'road', { x: 0.68, y: 0.48, w: 0.2, h: 0.2 }),
       ],
     };
   }

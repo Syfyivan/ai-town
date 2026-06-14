@@ -13,7 +13,7 @@ import InteractButton from './components/buttons/InteractButton.tsx';
 import FreezeButton from './components/FreezeButton.tsx';
 import { MAX_HUMAN_PLAYERS } from '../convex/constants.ts';
 import PoweredByConvex from './components/PoweredByConvex.tsx';
-import CinemaOverlay from './components/CinemaOverlay.tsx';
+import SpyglassOverlay from './components/SpyglassOverlay.tsx';
 import TownObservatory from './components/TownObservatory.tsx';
 import NpcManagerModal from './components/NpcManagerModal.tsx';
 import ArtStudioOverlay from './components/ArtStudioOverlay.tsx';
@@ -27,8 +27,8 @@ type TownScene = 'town' | 'studio' | 'garden' | 'profession';
 
 export default function Home() {
   const [helpModalOpen, setHelpModalOpen] = useState(false);
-  const [cinemaOpen, setCinemaOpen] = useState(() =>
-    new URLSearchParams(window.location.search).has('cinema'),
+  const [spyglassOpen, setSpyglassOpen] = useState(() =>
+    new URLSearchParams(window.location.search).has('spyglass'),
   );
   const [observatoryOpen, setObservatoryOpen] = useState(false);
   const [npcManagerOpen, setNpcManagerOpen] = useState(false);
@@ -44,7 +44,7 @@ export default function Home() {
   return (
     <main className="town-root relative flex min-h-screen flex-col items-center justify-between font-body game-background">
       {!townIsImmersive && scene === 'town' && <PoweredByConvex />}
-      <CinemaOverlay open={cinemaOpen} onClose={() => setCinemaOpen(false)} />
+      <SpyglassOverlay open={spyglassOpen} onClose={() => setSpyglassOpen(false)} />
       <TownObservatory open={observatoryOpen} onClose={() => setObservatoryOpen(false)} />
       <NpcManagerModal open={npcManagerOpen} onClose={() => setNpcManagerOpen(false)} />
 
@@ -71,7 +71,7 @@ export default function Home() {
           <p className="mt-4">点击地图可以移动你的角色。</p>
           <p className="mt-4">
             也可以用 WASD 或方向键移动；沿着小路走到农场路口后继续向前，或按 X
-            进入小菜园。靠近画室、影院和职业建筑门口时按 X 进入，按 Z
+            进入小菜园。靠近画室、观景台和职业建筑门口时按 X 进入，按 Z
             停止移动或取消查看。进入画室后，WASD 移动到工作站，X
             开工或领取工资。进入菜园后，WASD 在田里移动，X 播种、浇水或收获，Z
             切换种子。进入木作坊、铁铺、星井小塔或酒馆后，走到接待桌前按
@@ -113,10 +113,10 @@ export default function Home() {
           </>
         )}
 
-        {scene === 'town' && !cinemaOpen && (
+        {scene === 'town' && !spyglassOpen && (
           <Game
             immersive={townIsImmersive}
-            onOpenCinema={() => setCinemaOpen(true)}
+            onOpenSpyglass={() => setSpyglassOpen(true)}
             onOpenArtStudio={() => setScene('studio')}
             onOpenGarden={() => setScene('garden')}
             onOpenProfession={openProfession}

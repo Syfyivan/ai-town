@@ -1,5 +1,5 @@
 import { useAction } from 'convex/react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../convex/_generated/api';
 
 type Rect = {
@@ -59,26 +59,33 @@ function toParentPayload(node: VisualNode): ParentNodePayload {
   };
 }
 
-export default function CinemaOverlay(props: { open: boolean; onClose: () => void }) {
+export default function SpyglassOverlay(props: { open: boolean; onClose: () => void }) {
   const generateNextNode = useAction(api.visuals.generateNextNode);
+  const resolveClick = useAction(api.visuals.resolveClick);
   const [sessionId] = useState(makeSessionId);
   const [nodes, setNodes] = useState<VisualNode[]>([]);
   const [loadingState, setLoadingState] = useState<LoadingState>();
   const [error, setError] = useState<string>();
+  const [resolving, setResolving] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
   const requestIdRef = useRef(0);
 
   const currentNode = nodes[nodes.length - 1];
   const recentNodes = useMemo(() => nodes.slice(-6).reverse(), [nodes]);
   const loading = loadingState !== undefined;
+  const busy = loading || resolving;
 
   const loadNode = useCallback(
-    async (parent?: VisualNode, hotspot?: VisualHotspot) => {
+    async (parent?: VisualNode, hotspot?: VisualHotspot, subject?: string) => {
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
       setError(undefined);
       setLoadingState({
-        label: hotspot ? `沿着「${hotspot.label}」继续生成` : '生成溪山镇全景',
+        label: subject
+          ? `沿着「${subject}」继续放大`
+          : hotspot
+            ? `沿着「${hotspot.label}」继续放大`
+            : '正在观测溪山镇全景',
         depth: parent ? parent.depth + 1 : 0,
       });
 
@@ -87,11 +94,14 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
           sessionId,
           parent: parent ? toParentPayload(parent) : undefined,
           hotspot,
+          subject,
         })) as VisualNode;
         if (requestIdRef.current !== requestId) {
           return;
         }
-        setNodes((currentNodes) => (parent && hotspot ? [...currentNodes, nextNode] : [nextNode]));
+        setNodes((currentNodes) =>
+          parent && (hotspot || subject) ? [...currentNodes, nextNode] : [nextNode],
+        );
       } catch (loadError) {
         if (requestIdRef.current !== requestId) {
           return;
@@ -153,7 +163,7 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
     void loadNode();
   };
 
-  const resetFilm = () => {
+  const resetView = () => {
     requestIdRef.current += 1;
     setNodes([]);
     setError(undefined);
@@ -162,7 +172,7 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
   };
 
   const goBack = () => {
-    if (loading) {
+    if (busy) {
       return;
     }
     setNodes((currentNodes) =>
@@ -171,10 +181,45 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
   };
 
   const followHotspot = (hotspot: VisualHotspot) => {
-    if (!currentNode || loading) {
+    if (!currentNode || busy) {
       return;
     }
     void loadNode(currentNode, hotspot);
+  };
+
+  // True-Flipbook path: click anywhere on the frame, let the vision model say what
+  // is there, then zoom into that subject. Falls back to the suggested points when
+  // no vision model is configured (VISION_API_URL unset).
+  const onFrameClick = async (event: MouseEvent<HTMLImageElement>) => {
+    if (!currentNode?.imageUrl || busy) {
+      return;
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    setError(undefined);
+    setResolving(true);
+    try {
+      const result = await resolveClick({
+        imageUrl: currentNode.imageUrl,
+        x,
+        y,
+        title: currentNode.title,
+        path: nodes.map((node) => node.title),
+      });
+      if (result?.subject) {
+        void loadNode(currentNode, undefined, result.subject);
+      } else {
+        setError(
+          '望远镜还没接入视觉模型（后端未配置 VISION_API_URL）。先用右侧的「建议观测点」继续探索。',
+        );
+      }
+    } catch (resolveError) {
+      console.error('Failed to resolve click', resolveError);
+      setError(resolveError instanceof Error ? resolveError.message : '解析点击失败，请重试');
+    } finally {
+      setResolving(false);
+    }
   };
 
   return (
@@ -183,17 +228,17 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
       ref={overlayRef}
       role="dialog"
       aria-modal="true"
-      aria-label="溪山电影院"
+      aria-label="溪山观景台"
     >
       <div className="absolute inset-0 cinema-ambient" />
       <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden px-6 py-5">
         <header className="flex w-full min-w-0 shrink-0 items-center justify-between gap-4">
           <div className="min-w-0">
-            <h2 className="font-display text-5xl leading-none game-title">无限银幕</h2>
+            <h2 className="font-display text-5xl leading-none game-title">溪山观景台</h2>
             <p className="mt-1 truncate text-base text-brown-200">
               {currentNode
-                ? `${currentNode.title} / 第 ${currentNode.depth + 1} 层`
-                : '正在准备溪山镇的第一帧'}
+                ? `${currentNode.title} / 第 ${currentNode.depth + 1} 层 · 点画面任意处看得更近`
+                : '正在架起望远镜，观测溪山镇'}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -201,19 +246,19 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
               className="cinema-control disabled:cursor-not-allowed disabled:opacity-45"
               type="button"
               onClick={goBack}
-              disabled={nodes.length <= 1 || loading}
-              title="返回上一层"
+              disabled={nodes.length <= 1 || busy}
+              title="拉远一层"
             >
-              回退
+              拉远
             </button>
             <button
               className="cinema-control disabled:cursor-not-allowed disabled:opacity-45"
               type="button"
-              onClick={resetFilm}
-              disabled={loading}
-              title="重新生成小镇全景"
+              onClick={resetView}
+              disabled={busy}
+              title="重新观测小镇全景"
             >
-              重映
+              重新观测
             </button>
             <button
               className="cinema-control"
@@ -223,8 +268,8 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
             >
               全屏
             </button>
-            <button className="cinema-control" type="button" onClick={close} title="离开影院">
-              离场
+            <button className="cinema-control" type="button" onClick={close} title="收起望远镜">
+              收起
             </button>
           </div>
         </header>
@@ -235,9 +280,10 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
               {currentNode?.imageUrl ? (
                 <img
                   alt={currentNode.title}
-                  className="block h-full w-full select-none object-cover"
+                  className="block h-full w-full cursor-zoom-in select-none object-cover"
                   draggable={false}
                   src={currentNode.imageUrl}
+                  onClick={(event) => void onFrameClick(event)}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-[#101322]">
@@ -245,43 +291,39 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
                 </div>
               )}
 
-              {currentNode?.hotspots.map((hotspot) => (
-                <button
-                  key={hotspot.id}
-                  className="group absolute border-2 border-[#fec742]/75 bg-[#181425]/10 text-left shadow-[0_0_0_9999px_rgba(0,0,0,0)] transition hover:border-[#fff7d6] hover:bg-[#fec742]/20 focus:outline-none focus:ring-4 focus:ring-[#5acde8]/70 disabled:cursor-wait disabled:opacity-50"
-                  style={{
-                    left: `${hotspot.rect.x * 100}%`,
-                    top: `${hotspot.rect.y * 100}%`,
-                    width: `${hotspot.rect.w * 100}%`,
-                    height: `${hotspot.rect.h * 100}%`,
-                  }}
-                  type="button"
-                  disabled={loading}
-                  onClick={() => followHotspot(hotspot)}
-                  title={hotspot.nextPrompt}
-                >
-                  <span className="absolute left-2 top-2 max-w-[calc(100%-1rem)] truncate bg-[#181425]/85 px-2 py-1 text-sm text-[#fff7d6] opacity-95 shadow">
-                    {hotspot.label}
-                  </span>
-                </button>
-              ))}
+              {/* Telescope viewfinder vignette — purely decorative, lets clicks pass through. */}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  boxShadow: 'inset 0 0 180px 60px rgba(7,8,18,0.85)',
+                  borderRadius: '40%',
+                }}
+              />
+
+              {resolving && (
+                <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#5acde8]/80 bg-[#070812]/70 px-4 py-2 text-sm text-[#cfeffb]">
+                  正在辨认你点的位置…
+                </div>
+              )}
 
               {loadingState && (
                 <div className="absolute inset-0 flex items-end justify-center bg-[#f7efd9]/70 p-8 text-[#3b3128] backdrop-blur-sm">
                   <div className="w-[520px] max-w-full border-4 border-[#181425]/15 bg-[#fffaf1]/95 p-5 shadow-2xl">
                     <div className="mb-4 h-9 w-9 animate-spin rounded-full border-4 border-[#181425] border-t-transparent" />
                     <p className="text-2xl font-bold leading-tight">{loadingState.label}...</p>
-                    <p className="mt-2 text-sm opacity-75">Building visual node depth {loadingState.depth + 1}</p>
+                    <p className="mt-2 text-sm opacity-75">
+                      Building visual node depth {loadingState.depth + 1}
+                    </p>
                   </div>
                 </div>
               )}
 
               {error && (
                 <div className="absolute inset-x-6 bottom-6 border-4 border-[#dd7c42] bg-[#181425]/95 p-4 text-white">
-                  <p className="text-lg font-bold">这一帧没生成出来</p>
+                  <p className="text-lg font-bold">这一帧没看清</p>
                   <p className="mt-1 text-sm text-brown-100">{error}</p>
                   <button className="cinema-replay mt-3" type="button" onClick={retryCurrent}>
-                    重试
+                    知道了
                   </button>
                 </div>
               )}
@@ -297,19 +339,22 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
               <p className="mt-3 text-sm leading-relaxed text-brown-100">
                 {currentNode
                   ? currentNode.prompt
-                  : '第一帧会建立小镇全景和可继续延伸的语义热区。'}
+                  : '第一帧会观测小镇的真实全景，反映此刻镇民正在做的事。'}
               </p>
             </div>
 
             <div className="mt-5">
-              <p className="text-sm uppercase tracking-[0.18em] text-[#fec742]">Hotspots</p>
+              <p className="text-sm uppercase tracking-[0.18em] text-[#fec742]">建议观测点</p>
+              <p className="mt-1 text-xs text-brown-200">
+                接入视觉模型后，直接点画面任意处即可放大；这里是兜底的快捷探索点。
+              </p>
               <div className="mt-2 space-y-2">
                 {currentNode?.hotspots.map((hotspot) => (
                   <button
                     key={hotspot.id}
                     className="cinema-film-button w-full text-left disabled:cursor-wait disabled:opacity-50"
                     type="button"
-                    disabled={loading}
+                    disabled={busy}
                     onClick={() => followHotspot(hotspot)}
                     title={hotspot.nextPrompt}
                   >
@@ -323,7 +368,10 @@ export default function CinemaOverlay(props: { open: boolean; onClose: () => voi
               <p className="text-sm uppercase tracking-[0.18em] text-[#fec742]">History</p>
               <div className="mt-2 space-y-2">
                 {recentNodes.map((node) => (
-                  <div key={node.nodeId} className="border-l-4 border-[#fec742] bg-black/20 px-3 py-2">
+                  <div
+                    key={node.nodeId}
+                    className="border-l-4 border-[#fec742] bg-black/20 px-3 py-2"
+                  >
                     <p className="text-sm text-brown-100">
                       {node.depth + 1}. {node.title}
                     </p>

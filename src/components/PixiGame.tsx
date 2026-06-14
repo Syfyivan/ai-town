@@ -14,7 +14,7 @@ import { DebugPath } from './DebugPath.tsx';
 import { PositionIndicator } from './PositionIndicator.tsx';
 import { SHOW_DEBUG_UI } from './Game.tsx';
 import { ServerGame } from '../hooks/serverGame.ts';
-import { CINEMA_PORTAL_REGION, CinemaHotspot } from './CinemaHotspot.tsx';
+import { SPYGLASS_PORTAL_REGION, SpyglassHotspot } from './SpyglassHotspot.tsx';
 import { ART_STUDIO_PORTAL_REGION, ArtStudioHotspot } from './ArtStudioHotspot.tsx';
 import { GARDEN_PORTAL_REGION, GardenHotspot } from './GardenHotspot.tsx';
 import { useSessionIdentity } from '../hooks/useSessionIdentity.ts';
@@ -50,7 +50,7 @@ export const PixiGame = (props: {
   historicalTime: number | undefined;
   width: number;
   height: number;
-  onOpenCinema?: () => void;
+  onOpenSpyglass?: () => void;
   onOpenArtStudio?: () => void;
   onOpenGarden?: () => void;
   onOpenProfession?: (profession: ProfessionId) => void;
@@ -228,8 +228,8 @@ export const PixiGame = (props: {
           props.onOpenGarden();
           return;
         }
-        if (props.onOpenCinema && nearRegion(humanPlayer.position, CINEMA_PORTAL_REGION)) {
-          props.onOpenCinema();
+        if (props.onOpenSpyglass && nearRegion(humanPlayer.position, SPYGLASS_PORTAL_REGION)) {
+          props.onOpenSpyglass();
           return;
         }
         selectNearestResident(humanPlayer.position);
@@ -250,7 +250,7 @@ export const PixiGame = (props: {
     moveTo,
     props.game.world.players,
     props.onOpenArtStudio,
-    props.onOpenCinema,
+    props.onOpenSpyglass,
     props.onOpenGarden,
     props.onOpenProfession,
     props.setSelectedElement,
@@ -284,7 +284,7 @@ export const PixiGame = (props: {
       />
       <MailboxLayer count={mailboxCount} tileDim={tileDim} />
       {props.onOpenGarden && <FarmRoadHotspot tileDim={tileDim} />}
-      {props.onOpenCinema && <CinemaHotspot tileDim={tileDim} />}
+      {props.onOpenSpyglass && <SpyglassHotspot tileDim={tileDim} />}
       {props.onOpenArtStudio && <ArtStudioHotspot tileDim={tileDim} />}
       {props.onOpenGarden && <GardenHotspot tileDim={tileDim} />}
       {props.onOpenProfession &&

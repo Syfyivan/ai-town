@@ -17,7 +17,7 @@ export const SHOW_DEBUG_UI = !!import.meta.env.VITE_SHOW_DEBUG_UI;
 
 export default function Game(props: {
   immersive?: boolean;
-  onOpenCinema?: () => void;
+  onOpenSpyglass?: () => void;
   onOpenArtStudio?: () => void;
   onOpenGarden?: () => void;
   onOpenProfession?: (profession: ProfessionId) => void;
@@ -68,7 +68,7 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
                     width={width}
                     height={height}
                     historicalTime={historicalTime}
-                    onOpenCinema={props.onOpenCinema}
+                    onOpenSpyglass={props.onOpenSpyglass}
                     onOpenArtStudio={props.onOpenArtStudio}
                     onOpenGarden={props.onOpenGarden}
                     onOpenProfession={props.onOpenProfession}

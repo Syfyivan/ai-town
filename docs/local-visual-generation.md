@@ -1,6 +1,6 @@
 # Local Visual Generation
 
-The cinema visual explorer can run without an external API key.
+The spyglass (观景台) visual explorer can run without an external API key.
 
 There are two layers:
 
@@ -40,8 +40,48 @@ If Stable Diffusion is running on the host while the worker is in Docker, pass:
 SD_WEBUI_URL=http://host.docker.internal:7860
 ```
 
+## True-Flipbook: Click-Anywhere via a Vision Model
+
+The spyglass (观景台) overlay now lets you click **anywhere** on the frame, not just the
+authored hotspots. The click coordinate is sent to a vision-language model (`resolveClick`
+in `convex/visuals.ts`), which says what is at that point; that phrase becomes the subject of
+the next frame. This is the real Flipbook interaction — the hotspot tree below is only the
+fallback when no vision model is configured.
+
+The vision model uses a **dedicated** OpenAI-compatible endpoint, kept separate from the
+town's main chat LLM (which is usually a non-vision Ollama model). Configure three env vars:
+
+```sh
+# Local, free: an Ollama vision model (e.g. llava, qwen2-vl, llama3.2-vision)
+ollama pull llama3.2-vision
+npx convex env set VISION_API_URL http://127.0.0.1:11434/v1
+npx convex env set VISION_MODEL   llama3.2-vision
+# VISION_API_KEY is optional for local Ollama.
+```
+
+```sh
+# Hosted (one key, pay-as-you-go): OpenRouter / OpenAI / etc.
+npx convex env set VISION_API_URL https://openrouter.ai/api/v1
+npx convex env set VISION_MODEL   qwen/qwen2.5-vl-72b-instruct
+npx convex env set VISION_API_KEY <your-key>
+```
+
+If `VISION_API_URL` / `VISION_MODEL` are unset, `resolveClick` returns `null` and the overlay
+falls back to the suggested observation points (the authored hotspot tree). Note the vision
+model must be able to fetch the frame's `imageUrl` (a Convex storage URL); for a local model
+the Convex deployment URL must be reachable from where the model runs.
+
+## World-Grounding
+
+The root panorama is grounded in the **running** town. Before generating the overview frame,
+`loadTownContext` reads `api.world.defaultWorldStatus` + `api.world.townObservatory` and injects
+the residents' current activities and most recent memories into the image prompt. So the first
+frame reflects what the AI townsfolk are actually doing right now, instead of a fixed template.
+If the world query fails, grounding is skipped silently.
+
 ## Current Boundary
 
-The app now preserves a semantic path: town overview -> resident house -> courtyard -> room -> furniture detail, and similar paths for river, market, cinema, and mountain road.
-
-The generated image model still cannot truly inspect its own pixels and infer new hotspots. Hotspots are authored by the semantic node generator first, then the image prompt is produced from that node. This is the practical first version of the Flipbook-style interaction without needing a multimodal segmentation model.
+The app preserves a semantic path for the fallback tree: town overview -> resident house ->
+courtyard -> room -> furniture detail, plus similar paths for river, market, spyglass and the
+mountain road. With a vision model configured, exploration is no longer limited to that tree —
+any clicked point becomes the next subject.
