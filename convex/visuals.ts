@@ -183,6 +183,24 @@ export const resolveClick = action({
     if (!config) {
       return null;
     }
+    // Inline the frame as a base64 data URL. Many local vision servers (e.g. Ollama)
+    // do not fetch remote image_url values, so we download the bytes ourselves and
+    // embed them — this works uniformly across local and hosted providers.
+    let imageContent = args.imageUrl;
+    try {
+      const imageResponse = await fetch(args.imageUrl);
+      if (imageResponse.ok) {
+        const buffer = new Uint8Array(await imageResponse.arrayBuffer());
+        let binary = '';
+        for (let i = 0; i < buffer.length; i += 1) {
+          binary += String.fromCharCode(buffer[i]);
+        }
+        const contentType = imageResponse.headers.get('content-type') ?? 'image/png';
+        imageContent = `data:${contentType};base64,${btoa(binary)}`;
+      }
+    } catch (imageError) {
+      console.warn('resolveClick could not inline image, falling back to URL', imageError);
+    }
     try {
       const response = await fetch(`${config.url}/chat/completions`, {
         method: 'POST',
@@ -205,7 +223,7 @@ export const resolveClick = action({
             {
               role: 'user',
               content: [
-                { type: 'image_url', image_url: { url: args.imageUrl } },
+                { type: 'image_url', image_url: { url: imageContent } },
                 {
                   type: 'text',
                   text:
