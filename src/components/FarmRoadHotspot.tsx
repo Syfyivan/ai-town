@@ -1,7 +1,7 @@
 import { PixiComponent, applyDefaultProps } from '@pixi/react';
 import * as PIXI from 'pixi.js';
 import { GARDEN_PORTAL_REGION } from './GardenHotspot';
-import { GENTLE_TILES, addGentlePathPatch, addGentleTile } from './gentleTownTiles';
+import { GENTLE_TILES, addGentleTile } from './gentleTownTiles';
 
 type FarmRoadHotspotProps = {
   tileDim: number;
@@ -41,19 +41,6 @@ function buildFarmRoadSprite(tileDim: number) {
   graphics.drawEllipse(tileDim * 37, tileDim * 36.7, tileDim * 12, tileDim * 0.7);
   graphics.endFill();
   container.addChild(graphics);
-
-  for (let x = 24; x <= 46; x += 2) {
-    addGentlePathPatch(container, tileDim, x, 36);
-  }
-  for (let y = 24; y <= 34; y += 2) {
-    addGentlePathPatch(container, tileDim, 46, y);
-  }
-  for (let y = 26; y <= 34; y += 2) {
-    addGentlePathPatch(container, tileDim, 44, y);
-  }
-  for (let x = 30; x <= 44; x += 2) {
-    addGentlePathPatch(container, tileDim, x, 28);
-  }
 
   addGentleTile(container, GENTLE_TILES.post, tileDim, 45.55, 35.1);
   addGentleTile(container, GENTLE_TILES.post, tileDim, 47.5, 35.1);

@@ -1,6 +1,6 @@
 import { PixiComponent, applyDefaultProps } from '@pixi/react';
 import * as PIXI from 'pixi.js';
-import { GENTLE_TILES, addGentlePathPatch, addGentleTile } from './gentleTownTiles';
+import { GENTLE_TILES, addGentleTile } from './gentleTownTiles';
 import type { ProfessionBuilding } from './professionCatalog';
 import { FARM_LIFE_BUILDING_SPRITES, addFarmLifeSprite } from './farmLifeSprites';
 
@@ -168,8 +168,6 @@ function addPixelHouse(container: PIXI.Container, building: ProfessionBuilding, 
 function buildProfessionBuildingSprite(building: ProfessionBuilding, tileDim: number) {
   const container = new PIXI.Container() as ProfessionBuildingHotspotContainer;
 
-  addGentlePathPatch(container, tileDim, 3.55, 5.75);
-  addGentlePathPatch(container, tileDim, 3.65, 4.55);
   addPixelHouse(container, building, tileDim);
   addGentleTile(container, GENTLE_TILES.post, tileDim, 2.3, 6.25);
   addGentleTile(container, GENTLE_TILES.post, tileDim, 5.85, 6.25);

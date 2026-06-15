@@ -2,7 +2,6 @@ import { PixiComponent, applyDefaultProps } from '@pixi/react';
 import * as PIXI from 'pixi.js';
 import {
   GENTLE_TILES,
-  addGentlePathPatch,
   addGentleTile,
   addGentleTileGrid,
 } from './gentleTownTiles';
@@ -34,10 +33,6 @@ function buildGardenSprite(tileDim: number) {
   graphics.drawEllipse(width / 2, tileDim * 5.4, tileDim * 2.45, tileDim * 0.32);
   graphics.endFill();
   container.addChild(graphics);
-
-  addGentlePathPatch(container, tileDim, 4, 5.3);
-  addGentlePathPatch(container, tileDim, 4.15, 4);
-  addGentlePathPatch(container, tileDim, 3.35, 2.85);
 
   addGentleTileGrid(
     container,
