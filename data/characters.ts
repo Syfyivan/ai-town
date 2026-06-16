@@ -144,5 +144,5 @@ export function randomCharacterName() {
   return characters[Math.floor(Math.random() * characters.length)].name;
 }
 
-// Characters move at 0.75 tiles per second.
-export const movementSpeed = 0.75;
+// Characters move quickly enough for the default "run" mode to feel responsive.
+export const movementSpeed = 1.6;

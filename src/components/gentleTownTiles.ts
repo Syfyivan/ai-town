@@ -1,46 +1,38 @@
 import * as PIXI from 'pixi.js';
 
 const GENTLE_TILE_SIZE = 32;
-const GENTLE_TILE_COLUMNS = 45;
-const GENTLE_TILE_SOURCE = '/ai-town/assets/gentle-obj.png';
+const GENTLE_TILE_COLUMNS = 16;
+const GENTLE_TILE_SOURCE = '/ai-town/assets/farm-rpg/terrain/ai-town-terrain.png';
 
 const textureCache = new Map<number, PIXI.Texture>();
 
 export const GENTLE_TILES = {
-  grass: 271,
-  fieldTopLeft: 747,
-  fieldTopRight: 748,
-  fieldBottomLeft: 792,
-  fieldBottomRight: 793,
-  pathTopLeft: 747,
-  pathTopRight: 748,
-  pathBottomLeft: 792,
-  pathBottomRight: 793,
-  tentTopLeft: 751,
-  tentTop: 752,
-  tentTopRight: 753,
-  tentMidLeft: 796,
-  tentMid: 797,
-  tentMidRight: 798,
-  tentBottomLeft: 841,
-  tentBottom: 842,
-  tentBottomRight: 843,
-  stump: 893,
-  pine: 894,
-  rock: 896,
-  flowerWhite: 935,
-  flowerRed: 936,
-  flowerYellow: 937,
-  log: 938,
-  bush: 940,
-  mushroom: 850,
-  post: 944,
+  grass: 0,
+  grassA: 1,
+  grassB: 2,
+  grassC: 3,
+  path: 4,
+  pathAlt: 5,
+  tilledSoil: 6,
+  wetSoil: 7,
+  grassSprig: 17,
+  flowerGold: 18,
+  flowerBlue: 19,
+  flowerPurple: 20,
+  rock: 21,
+  stump: 22,
+  tallGrassA: 23,
+  tallGrassB: 24,
+  grassClumpA: 25,
+  grassClumpB: 26,
+  grassClumpC: 27,
+  grassClumpD: 28,
+  mushroom: 29,
+  flowerWhite: 30,
+  flowerPale: 31,
+  treeTop: 32,
+  treeBottom: 33,
 } as const;
-
-export const GENTLE_PATH_PATCH = [
-  [GENTLE_TILES.pathTopLeft, GENTLE_TILES.pathTopRight],
-  [GENTLE_TILES.pathBottomLeft, GENTLE_TILES.pathBottomRight],
-];
 
 function gentleTexture(frame: number) {
   const cached = textureCache.get(frame);
@@ -76,27 +68,4 @@ export function addGentleTile(
   sprite.scale.set(scale);
   container.addChild(sprite);
   return sprite;
-}
-
-export function addGentleTileGrid(
-  container: PIXI.Container,
-  frames: number[][],
-  tileDim: number,
-  tileX = 0,
-  tileY = 0,
-) {
-  frames.forEach((row, y) => {
-    row.forEach((frame, x) => {
-      addGentleTile(container, frame, tileDim, tileX + x, tileY + y);
-    });
-  });
-}
-
-export function addGentlePathPatch(
-  container: PIXI.Container,
-  tileDim: number,
-  tileX: number,
-  tileY: number,
-) {
-  addGentleTileGrid(container, GENTLE_PATH_PATCH, tileDim, tileX, tileY);
 }

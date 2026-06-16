@@ -44,6 +44,7 @@ export const SpyglassHotspot = PixiComponent('SpyglassHotspot', {
     const container = buildSpyglassSprite(props.tileDim);
     container.x = SPYGLASS_REGION.x * props.tileDim;
     container.y = SPYGLASS_REGION.y * props.tileDim;
+    container.zIndex = (SPYGLASS_REGION.y + SPYGLASS_REGION.height) * props.tileDim;
     return container;
   },
 
@@ -55,6 +56,7 @@ export const SpyglassHotspot = PixiComponent('SpyglassHotspot', {
     if (oldProps.tileDim !== newProps.tileDim) {
       instance.x = SPYGLASS_REGION.x * newProps.tileDim;
       instance.y = SPYGLASS_REGION.y * newProps.tileDim;
+      instance.zIndex = (SPYGLASS_REGION.y + SPYGLASS_REGION.height) * newProps.tileDim;
     }
     applyDefaultProps(instance, oldProps, newProps);
   },

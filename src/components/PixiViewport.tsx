@@ -30,6 +30,7 @@ export default PixiComponent('Viewport', {
     if (viewportRef) {
       viewportRef.current = viewport;
     }
+    viewport.sortableChildren = true;
     // Activate plugins
     viewport
       .drag()

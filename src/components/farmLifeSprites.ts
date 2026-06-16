@@ -18,6 +18,8 @@ const textureCache = new Map<string, PIXI.Texture>();
 export const FARM_LIFE_BUILDING_SPRITES = {
   // Generic timber/cottage building for carpenter, artist, farmer, seed seller…
   timberShop: { src: `${FARM_RPG}/house-1.png`, x: 0, y: 0, width: 128, height: 112 },
+  // Red-roof studio/cottage used where the old tent art was still leaking through.
+  houseStudio: { src: `${FARM_RPG}/house-3.png`, x: 0, y: 0, width: 128, height: 112 },
   // Forge: leftmost (complete) building in the blacksmith sheet.
   forgeShop: { src: `${FARM_RPG}/blacksmith.png`, x: 0, y: 0, width: 128, height: 112 },
   // Wizard tower (purple roof + vines) for mage / scientist.

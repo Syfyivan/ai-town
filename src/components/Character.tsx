@@ -67,24 +67,8 @@ export const Character = ({
 
   if (!spriteSheet) return null;
 
-  let blockOffset = { x: 0, y: 0 };
-  switch (roundedOrientation) {
-    case 2:
-      blockOffset = { x: -20, y: 0 };
-      break;
-    case 0:
-      blockOffset = { x: 20, y: 0 };
-      break;
-    case 3:
-      blockOffset = { x: 0, y: -20 };
-      break;
-    case 1:
-      blockOffset = { x: 0, y: 20 };
-      break;
-  }
-
   return (
-    <Container x={x} y={y} interactive={true} pointerdown={onClick} cursor="pointer">
+    <Container x={x} y={y} zIndex={y} interactive={true} pointerdown={onClick} cursor="pointer">
       {isThinking && (
         // TODO: We'll eventually have separate assets for thinking and speech animations.
         <Text x={-20} y={-10} scale={{ x: -0.8, y: 0.8 }} text={'💭'} anchor={{ x: 0.5, y: 0.5 }} />

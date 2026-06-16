@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 const TILE = 32;
 const WIDTH = 64;
 const HEIGHT = 48;
-const TILESET_COLUMNS = 8;
+const TILESET_COLUMNS = 16;
 const TILESET_ROWS = 4;
 const TILESET_PATH = '/ai-town/assets/farm-rpg/terrain/ai-town-terrain.png';
 
@@ -12,34 +12,40 @@ const frame = (x, y) => x + y * TILESET_COLUMNS;
 
 const TILES = {
   grass: frame(0, 0),
-  path: frame(3, 0),
-  pathAlt: frame(4, 0),
-  pondTopLeft: frame(5, 0),
-  pondTop: frame(6, 0),
-  pondTopRight: frame(7, 0),
-  pondLeft: frame(0, 1),
-  pondCenter: frame(1, 1),
-  pondRight: frame(2, 1),
-  pondBottomLeft: frame(3, 1),
-  pondBottom: frame(4, 1),
-  pondBottomRight: frame(5, 1),
-  grassSprig: frame(6, 1),
-  flowerGold: frame(7, 1),
-  flowerBlue: frame(0, 2),
-  flowerPurple: frame(1, 2),
-  smallRock: frame(2, 2),
-  stump: frame(3, 2),
-  grassClumpB: frame(3, 3),
-  grassClumpD: frame(5, 3),
-  tallGrassA: frame(6, 3),
-  tallGrassB: frame(7, 3),
+  grassA: frame(1, 0),
+  grassB: frame(2, 0),
+  grassC: frame(3, 0),
+  path: frame(4, 0),
+  pathAlt: frame(5, 0),
+  tilledSoil: frame(6, 0),
+  wetSoil: frame(7, 0),
+  pondTopLeft: frame(8, 0),
+  pondTop: frame(9, 0),
+  pondTopRight: frame(10, 0),
+  pondLeft: frame(11, 0),
+  pondCenter: frame(12, 0),
+  pondRight: frame(13, 0),
+  pondBottomLeft: frame(14, 0),
+  pondBottom: frame(15, 0),
+  pondBottomRight: frame(0, 1),
+  grassSprig: frame(1, 1),
+  flowerGold: frame(2, 1),
+  flowerBlue: frame(3, 1),
+  flowerPurple: frame(4, 1),
+  smallRock: frame(5, 1),
+  stump: frame(6, 1),
+  tallGrassA: frame(7, 1),
+  tallGrassB: frame(8, 1),
+  grassClumpA: frame(9, 1),
+  grassClumpB: frame(10, 1),
+  grassClumpC: frame(11, 1),
+  grassClumpD: frame(12, 1),
+  mushroom: frame(13, 1),
+  flowerWhite: frame(14, 1),
+  flowerPale: frame(15, 1),
 };
 
-const BIG_TREE = [
-  [frame(4, 2), frame(5, 2)],
-  [frame(6, 2), frame(7, 2)],
-  [frame(0, 3), frame(1, 3)],
-];
+const MAPLE_TREE = [[frame(0, 2)], [frame(1, 2)]];
 
 const PROFESSION_REGIONS = [
   { name: 'carpenter', x: 7, y: 14, width: 9, height: 8, portal: { x: 10, y: 21, width: 2, height: 1 } },
@@ -60,7 +66,22 @@ function makeLayer(fill) {
   return Array.from({ length: WIDTH }, () => Array(HEIGHT).fill(fill));
 }
 
-const base = makeLayer(TILES.grass);
+function pseudoRandom(x, y) {
+  const value = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function pickBaseGrass(x, y) {
+  const variant = pseudoRandom(x + 17, y + 31);
+  if (variant > 0.82) return TILES.grassC;
+  if (variant > 0.62) return TILES.grassB;
+  if (variant > 0.38) return TILES.grassA;
+  return TILES.grass;
+}
+
+const base = Array.from({ length: WIDTH }, (_, x) =>
+  Array.from({ length: HEIGHT }, (_, y) => pickBaseGrass(x, y)),
+);
 const overlay = makeLayer(-1);
 const object = makeLayer(-1);
 const reserved = new Set();
@@ -92,11 +113,6 @@ function markPortal(portal) {
 for (const region of BUILDING_REGIONS) {
   markRegion(region, 1);
   markPortal(region.portal);
-}
-
-function pseudoRandom(x, y) {
-  const value = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-  return value - Math.floor(value);
 }
 
 function setPath(x, y) {
@@ -142,15 +158,15 @@ drawPath(
     { x: 51, y: 23 },
     { x: 59, y: 23 },
   ],
-  2,
+  1,
 );
-drawPath([{ x: 11, y: 22 }, { x: 11, y: 24 }, { x: 12, y: 25 }], 2);
-drawPath([{ x: 36, y: 22 }, { x: 36, y: 24 }, { x: 34, y: 25 }], 2);
-drawPath([{ x: 51, y: 21 }, { x: 51, y: 22 }, { x: 51, y: 23 }], 2);
-drawPath([{ x: 50, y: 12 }, { x: 50, y: 17 }, { x: 52, y: 22 }, { x: 51, y: 23 }], 2);
-drawPath([{ x: 17, y: 34 }, { x: 17, y: 31 }, { x: 20, y: 28 }, { x: 27, y: 24 }], 2);
-drawPath([{ x: 47, y: 37 }, { x: 47, y: 33 }, { x: 45, y: 29 }, { x: 43, y: 25 }], 2);
-drawPath([{ x: 10, y: 43 }, { x: 10, y: 39 }, { x: 13, y: 36 }, { x: 17, y: 34 }], 2);
+drawPath([{ x: 11, y: 22 }, { x: 11, y: 24 }, { x: 12, y: 25 }]);
+drawPath([{ x: 36, y: 22 }, { x: 36, y: 24 }, { x: 34, y: 25 }]);
+drawPath([{ x: 51, y: 21 }, { x: 51, y: 22 }, { x: 51, y: 23 }]);
+drawPath([{ x: 50, y: 12 }, { x: 50, y: 17 }, { x: 52, y: 22 }, { x: 51, y: 23 }]);
+drawPath([{ x: 17, y: 34 }, { x: 17, y: 31 }, { x: 20, y: 28 }, { x: 27, y: 24 }]);
+drawPath([{ x: 47, y: 37 }, { x: 47, y: 33 }, { x: 45, y: 29 }, { x: 43, y: 25 }]);
+drawPath([{ x: 10, y: 43 }, { x: 10, y: 39 }, { x: 13, y: 36 }, { x: 17, y: 34 }]);
 
 function placePond(x, y, width, height) {
   for (let px = 0; px < width; px += 1) {
@@ -208,20 +224,34 @@ function placeObjectPattern(x, y, pattern) {
 [
   [2, 4],
   [7, 5],
+  [12, 3],
   [16, 5],
+  [22, 4],
   [27, 5],
+  [32, 3],
   [38, 5],
+  [42, 2],
   [57, 5],
   [2, 16],
+  [18, 12],
   [21, 16],
+  [29, 10],
+  [41, 12],
   [57, 16],
+  [4, 24],
+  [18, 30],
   [3, 32],
+  [31, 30],
+  [41, 38],
+  [51, 31],
   [23, 38],
   [33, 39],
   [55, 38],
   [58, 27],
   [37, 33],
-].forEach(([x, y]) => placeObjectPattern(x, y, BIG_TREE));
+  [7, 44],
+  [60, 42],
+].forEach(([x, y]) => placeObjectPattern(x, y, MAPLE_TREE));
 
 function placeBlockingTile(x, y, tile) {
   if (!inBounds(x, y) || reserved.has(key(x, y)) || pathCells.has(key(x, y))) return;
@@ -236,13 +266,14 @@ function placeWalkableDecoration(x, y, tile) {
 
 function pickGrassDecoration(x, y) {
   const variant = pseudoRandom(x + 200, y + 200);
-  if (variant > 0.88) return TILES.flowerPurple;
-  if (variant > 0.76) return TILES.flowerBlue;
-  if (variant > 0.62) return TILES.flowerGold;
-  if (variant > 0.46) return TILES.tallGrassA;
-  if (variant > 0.3) return TILES.tallGrassB;
-  if (variant > 0.16) return TILES.grassClumpD;
-  if (variant > 0.08) return TILES.grassClumpB;
+  if (variant > 0.93) return TILES.flowerPurple;
+  if (variant > 0.86) return TILES.flowerBlue;
+  if (variant > 0.78) return TILES.flowerGold;
+  if (variant > 0.64) return TILES.tallGrassA;
+  if (variant > 0.5) return TILES.tallGrassB;
+  if (variant > 0.34) return TILES.grassClumpD;
+  if (variant > 0.18) return TILES.grassClumpB;
+  if (variant > 0.08) return TILES.grassClumpA;
   return TILES.grassSprig;
 }
 
@@ -250,9 +281,9 @@ for (let x = 1; x < WIDTH - 1; x += 1) {
   for (let y = 1; y < HEIGHT - 1; y += 1) {
     const noise = pseudoRandom(x + 100, y + 100);
     if (reserved.has(key(x, y)) || pathCells.has(key(x, y))) continue;
-    if ((x < 5 || x > WIDTH - 6 || y < 5 || y > HEIGHT - 5) && noise > 0.9) {
+    if ((x < 5 || x > WIDTH - 6 || y < 5 || y > HEIGHT - 5) && noise > 0.92) {
       placeBlockingTile(x, y, noise > 0.96 ? TILES.stump : TILES.smallRock);
-    } else if (noise > 0.925) {
+    } else if (noise > 0.865) {
       placeWalkableDecoration(x, y, pickGrassDecoration(x, y));
     }
   }

@@ -7,7 +7,7 @@ export type PlayerMovementMode = 'walk' | 'run';
 
 function readMovementMode(): PlayerMovementMode {
   const stored = window.localStorage.getItem(PLAYER_MOVEMENT_MODE_KEY);
-  return stored === 'run' ? 'run' : 'walk';
+  return stored === 'walk' ? 'walk' : 'run';
 }
 
 function dispatchPlayerSettingsUpdate() {

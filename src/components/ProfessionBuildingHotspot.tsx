@@ -169,10 +169,10 @@ function buildProfessionBuildingSprite(building: ProfessionBuilding, tileDim: nu
   const container = new PIXI.Container() as ProfessionBuildingHotspotContainer;
 
   addPixelHouse(container, building, tileDim);
-  addGentleTile(container, GENTLE_TILES.post, tileDim, 2.3, 6.25);
-  addGentleTile(container, GENTLE_TILES.post, tileDim, 5.85, 6.25);
-  addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 1.45, 5.35);
-  addGentleTile(container, GENTLE_TILES.flowerYellow, tileDim, 6.95, 5.25);
+  addGentleTile(container, GENTLE_TILES.rock, tileDim, 1.1, 6.05);
+  addGentleTile(container, GENTLE_TILES.stump, tileDim, 7.35, 6.05);
+  addGentleTile(container, GENTLE_TILES.flowerBlue, tileDim, 1.45, 5.25);
+  addGentleTile(container, GENTLE_TILES.flowerGold, tileDim, 7.05, 5.15);
 
   return container;
 }
@@ -182,6 +182,7 @@ export const ProfessionBuildingHotspot = PixiComponent('ProfessionBuildingHotspo
     const container = buildProfessionBuildingSprite(props.building, props.tileDim);
     container.x = props.building.region.x * props.tileDim;
     container.y = props.building.region.y * props.tileDim;
+    container.zIndex = (props.building.region.y + props.building.region.height) * props.tileDim;
     container.building = props.building;
     return container;
   },
@@ -195,6 +196,8 @@ export const ProfessionBuildingHotspot = PixiComponent('ProfessionBuildingHotspo
     if (oldProps.tileDim !== newProps.tileDim || oldProps.building !== newProps.building) {
       instance.x = newProps.building.region.x * newProps.tileDim;
       instance.y = newProps.building.region.y * newProps.tileDim;
+      instance.zIndex =
+        (newProps.building.region.y + newProps.building.region.height) * newProps.tileDim;
     }
     applyDefaultProps(instance, oldProps, newProps);
   },

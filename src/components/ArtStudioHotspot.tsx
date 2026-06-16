@@ -1,10 +1,7 @@
 import { PixiComponent, applyDefaultProps } from '@pixi/react';
 import * as PIXI from 'pixi.js';
-import {
-  GENTLE_TILES,
-  addGentleTile,
-  addGentleTileGrid,
-} from './gentleTownTiles';
+import { GENTLE_TILES, addGentleTile } from './gentleTownTiles';
+import { FARM_LIFE_BUILDING_SPRITES, addFarmLifeSprite } from './farmLifeSprites';
 
 type ArtStudioHotspotProps = {
   tileDim: number;
@@ -33,23 +30,20 @@ function buildArtStudioSprite(tileDim: number) {
   graphics.endFill();
   container.addChild(graphics);
 
-  addGentleTileGrid(
+  addFarmLifeSprite(
     container,
-    [
-      [GENTLE_TILES.tentTopLeft, GENTLE_TILES.tentTop, GENTLE_TILES.tentTopRight],
-      [GENTLE_TILES.tentMidLeft, GENTLE_TILES.tentMid, GENTLE_TILES.tentMidRight],
-      [GENTLE_TILES.tentBottomLeft, GENTLE_TILES.tentBottom, GENTLE_TILES.tentBottomRight],
-    ],
+    FARM_LIFE_BUILDING_SPRITES.houseStudio,
     tileDim,
-    3.35,
-    1,
+    2.05,
+    1.05,
+    5.85,
   );
 
-  addGentleTile(container, GENTLE_TILES.log, tileDim, 2, 4.6);
-  addGentleTile(container, GENTLE_TILES.flowerRed, tileDim, 1.55, 5.45);
-  addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 7.1, 5.35);
-  addGentleTile(container, GENTLE_TILES.post, tileDim, 3.75, 6.05);
-  addGentleTile(container, GENTLE_TILES.post, tileDim, 5.7, 6.05);
+  addGentleTile(container, GENTLE_TILES.stump, tileDim, 1.55, 5.2);
+  addGentleTile(container, GENTLE_TILES.flowerPurple, tileDim, 1.55, 5.95);
+  addGentleTile(container, GENTLE_TILES.flowerBlue, tileDim, 7.1, 5.35);
+  addGentleTile(container, GENTLE_TILES.rock, tileDim, 3.75, 6.05);
+  addGentleTile(container, GENTLE_TILES.grassSprig, tileDim, 5.7, 6.05);
   return container;
 }
 
@@ -58,6 +52,7 @@ export const ArtStudioHotspot = PixiComponent('ArtStudioHotspot', {
     const container = buildArtStudioSprite(props.tileDim);
     container.x = ART_STUDIO_REGION.x * props.tileDim;
     container.y = ART_STUDIO_REGION.y * props.tileDim;
+    container.zIndex = (ART_STUDIO_REGION.y + ART_STUDIO_REGION.height) * props.tileDim;
     return container;
   },
 
@@ -69,6 +64,7 @@ export const ArtStudioHotspot = PixiComponent('ArtStudioHotspot', {
     if (oldProps.tileDim !== newProps.tileDim) {
       instance.x = ART_STUDIO_REGION.x * newProps.tileDim;
       instance.y = ART_STUDIO_REGION.y * newProps.tileDim;
+      instance.zIndex = (ART_STUDIO_REGION.y + ART_STUDIO_REGION.height) * newProps.tileDim;
     }
     applyDefaultProps(instance, oldProps, newProps);
   },

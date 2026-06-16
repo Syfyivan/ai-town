@@ -42,17 +42,21 @@ function buildFarmRoadSprite(tileDim: number) {
   graphics.endFill();
   container.addChild(graphics);
 
-  addGentleTile(container, GENTLE_TILES.post, tileDim, 45.55, 35.1);
-  addGentleTile(container, GENTLE_TILES.post, tileDim, 47.5, 35.1);
-  addGentleTile(container, GENTLE_TILES.flowerYellow, tileDim, 43.55, 34.75);
-  addGentleTile(container, GENTLE_TILES.flowerWhite, tileDim, 48.45, 34.7);
+  addGentleTile(container, GENTLE_TILES.rock, tileDim, 45.55, 35.1);
+  addGentleTile(container, GENTLE_TILES.stump, tileDim, 47.5, 35.1);
+  addGentleTile(container, GENTLE_TILES.flowerGold, tileDim, 43.55, 34.75);
+  addGentleTile(container, GENTLE_TILES.flowerBlue, tileDim, 48.45, 34.7);
   addRoadSign(container, tileDim, 44.65, 34.55);
 
   return container;
 }
 
 export const FarmRoadHotspot = PixiComponent('FarmRoadHotspot', {
-  create: (props: FarmRoadHotspotProps) => buildFarmRoadSprite(props.tileDim),
+  create: (props: FarmRoadHotspotProps) => {
+    const container = buildFarmRoadSprite(props.tileDim);
+    container.zIndex = (GARDEN_PORTAL_REGION.y + GARDEN_PORTAL_REGION.height) * props.tileDim;
+    return container;
+  },
 
   applyProps: (
     instance: PIXI.Container,
@@ -62,6 +66,8 @@ export const FarmRoadHotspot = PixiComponent('FarmRoadHotspot', {
     if (oldProps.tileDim !== newProps.tileDim) {
       instance.removeChildren();
       instance.addChild(buildFarmRoadSprite(newProps.tileDim));
+      instance.zIndex =
+        (GARDEN_PORTAL_REGION.y + GARDEN_PORTAL_REGION.height) * newProps.tileDim;
     }
     applyDefaultProps(instance, oldProps, newProps);
   },
