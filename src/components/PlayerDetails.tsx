@@ -53,7 +53,6 @@ export default function PlayerDetails({
 
   const playerDescription = playerId && game.playerDescriptions.get(playerId);
 
-  const startConversation = useSendInput(engineId, 'startConversation');
   const acceptInvite = useSendInput(engineId, 'acceptInvite');
   const rejectInvite = useSendInput(engineId, 'rejectInvite');
   const leaveConversation = useSendInput(engineId, 'leaveConversation');
@@ -65,7 +64,6 @@ export default function PlayerDetails({
     return null;
   }
   const isMe = humanPlayer && player.id === humanPlayer.id;
-  const canInvite = !isMe && !playerConversation && humanPlayer && !humanConversation;
   const sameConversation =
     !isMe &&
     humanPlayer &&
@@ -88,13 +86,6 @@ export default function PlayerDetails({
     playerStatus?.kind === 'participating' &&
     humanStatus?.kind === 'participating';
 
-  const onStartConversation = async () => {
-    if (!humanPlayer || !playerId) {
-      return;
-    }
-    console.log(`Starting conversation`);
-    await toastOnError(startConversation({ playerId: humanPlayer.id, invitee: playerId }));
-  };
   const onAcceptInvite = async () => {
     if (!humanPlayer || !humanConversation || !playerId) {
       return;
@@ -149,19 +140,6 @@ export default function PlayerDetails({
           </h2>
         </a>
       </div>
-      {canInvite && (
-        <a
-          className={
-            'mt-6 button text-white shadow-solid text-xl cursor-pointer pointer-events-auto' +
-            pendingSuffix('startConversation')
-          }
-          onClick={() => void onStartConversation()}
-        >
-          <div className="h-full bg-clay-700 text-center">
-            <span>开始对话</span>
-          </div>
-        </a>
-      )}
       {waitingForAccept && (
         <a className="mt-6 button text-white shadow-solid text-xl cursor-pointer pointer-events-auto opacity-50">
           <div className="h-full bg-clay-700 text-center">
@@ -241,6 +219,7 @@ export default function PlayerDetails({
           inConversationWithMe={inConversationWithMe ?? false}
           conversation={{ kind: 'active', doc: playerConversation }}
           humanPlayer={humanPlayer}
+          showHumanInput={false}
           scrollViewRef={scrollViewRef}
         />
       )}
@@ -255,6 +234,7 @@ export default function PlayerDetails({
             inConversationWithMe={false}
             conversation={{ kind: 'archived', doc: previousConversation }}
             humanPlayer={humanPlayer}
+            showHumanInput={false}
             scrollViewRef={scrollViewRef}
           />
         </>

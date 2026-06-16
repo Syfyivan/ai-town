@@ -4,12 +4,10 @@ import { characters } from '../../data/characters.ts';
 import { toast } from 'react-toastify';
 import { Player as ServerPlayer } from '../../convex/aiTown/player.ts';
 import { GameId } from '../../convex/aiTown/ids.ts';
-import { Id } from '../../convex/_generated/dataModel';
 import { Location, locationFields, playerLocation } from '../../convex/aiTown/location.ts';
 import { useHistoricalValue } from '../hooks/useHistoricalValue.ts';
-import { PlayerDescription } from '../../convex/aiTown/playerDescription.ts';
-import { WorldMap } from '../../convex/aiTown/worldMap.ts';
 import { ServerGame } from '../hooks/serverGame.ts';
+import * as PIXI from 'pixi.js';
 
 export type SelectElement = (element?: { kind: 'player'; id: GameId<'players'> }) => void;
 
@@ -20,6 +18,7 @@ export const Player = ({
   isViewer,
   player,
   onClick,
+  onRightClick,
   historicalTime,
 }: {
   game: ServerGame;
@@ -27,6 +26,7 @@ export const Player = ({
   player: ServerPlayer;
 
   onClick: SelectElement;
+  onRightClick?: (playerId: GameId<'players'>) => void;
   historicalTime?: number;
 }) => {
   const playerCharacter = game.playerDescriptions.get(player.id)?.character;
@@ -82,8 +82,13 @@ export const Player = ({
         textureUrl={character.textureUrl}
         spritesheetData={character.spritesheetData}
         speed={character.speed}
-        onClick={() => {
+        onPointerDown={(event: PIXI.FederatedPointerEvent) => {
+          event.stopPropagation();
+          event.preventDefault();
           onClick({ kind: 'player', id: player.id });
+          if (event.button === 2) {
+            onRightClick?.(player.id);
+          }
         }}
       />
     </>

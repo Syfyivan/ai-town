@@ -13,6 +13,7 @@ export function Messages({
   conversation,
   inConversationWithMe,
   humanPlayer,
+  showHumanInput = true,
   scrollViewRef,
 }: {
   worldId: Id<'worlds'>;
@@ -22,6 +23,7 @@ export function Messages({
     | { kind: 'archived'; doc: Doc<'archivedConversations'> };
   inConversationWithMe: boolean;
   humanPlayer?: Player;
+  showHumanInput?: boolean;
   scrollViewRef: React.RefObject<HTMLDivElement>;
 }) {
   const humanPlayerId = humanPlayer?.id;
@@ -155,14 +157,17 @@ export function Messages({
             </div>
           </div>
         )}
-        {humanPlayer && inConversationWithMe && conversation.kind === 'active' && (
-          <MessageInput
-            worldId={worldId}
-            engineId={engineId}
-            conversation={conversation.doc}
-            humanPlayer={humanPlayer}
-          />
-        )}
+        {showHumanInput &&
+          humanPlayer &&
+          inConversationWithMe &&
+          conversation.kind === 'active' && (
+            <MessageInput
+              worldId={worldId}
+              engineId={engineId}
+              conversation={conversation.doc}
+              humanPlayer={humanPlayer}
+            />
+          )}
       </div>
     </div>
   );

@@ -72,7 +72,16 @@ export const PixiGame = (props: {
   )?.id;
 
   const moveTo = useSendInput(props.engineId, 'moveTo');
+  const startConversation = useSendInput(props.engineId, 'startConversation');
+  const acceptInvite = useSendInput(props.engineId, 'acceptInvite');
   const lastKeyboardMoveAt = useRef(0);
+
+  useEffect(() => {
+    const view = pixiApp.view as unknown as HTMLCanvasElement;
+    const preventContextMenu = (event: MouseEvent) => event.preventDefault();
+    view.addEventListener('contextmenu', preventContextMenu);
+    return () => view.removeEventListener('contextmenu', preventContextMenu);
+  }, [pixiApp.view]);
 
   // Interaction for clicking on the world to navigate.
   const dragStart = useRef<{ screenX: number; screenY: number } | null>(null);
@@ -121,6 +130,31 @@ export const PixiGame = (props: {
   const { width, height, tileDim } = props.game.worldMap;
   const players = [...props.game.world.players.values()];
   const mailboxCount = players.filter((player) => !player.human).length;
+
+  const startNpcConversation = async (playerId: (typeof players)[number]['id']) => {
+    props.setSelectedElement({ kind: 'player', id: playerId });
+    if (!humanPlayerId || playerId === humanPlayerId) {
+      return;
+    }
+    const humanPlayer = props.game.world.players.get(humanPlayerId);
+    const npcPlayer = props.game.world.players.get(playerId);
+    if (!humanPlayer || !npcPlayer || npcPlayer.human) {
+      return;
+    }
+    const humanConversation = props.game.world.playerConversation(humanPlayer);
+    const npcConversation = props.game.world.playerConversation(npcPlayer);
+    if (humanConversation && npcConversation && humanConversation.id === npcConversation.id) {
+      return;
+    }
+    try {
+      const conversationId = await toastOnError(
+        startConversation({ playerId, invitee: humanPlayerId }),
+      );
+      await toastOnError(acceptInvite({ playerId: humanPlayerId, conversationId }));
+    } catch {
+      // toastOnError already surfaced the backend reason.
+    }
+  };
 
   useEffect(() => {
     const isTextInput = (target: EventTarget | null) => {
@@ -310,6 +344,7 @@ export const PixiGame = (props: {
           player={p}
           isViewer={p.id === humanPlayerId}
           onClick={props.setSelectedElement}
+          onRightClick={(playerId) => void startNpcConversation(playerId)}
           historicalTime={props.historicalTime}
         />
       ))}

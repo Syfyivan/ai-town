@@ -59,6 +59,7 @@ export async function startConversationMessage(
     `你是 ${player.name}，你刚刚和 ${otherPlayer.name} 开始了一段对话。`,
   ];
   prompt.push(...agentPrompts(otherPlayer, agent, otherAgent ?? null));
+  prompt.push(...silentHumanListenerPrompt(otherPlayer, otherAgent ?? null));
   prompt.push(...previousConversationPrompt(otherPlayer, lastConversation));
   prompt.push(...relatedMemoriesPrompt(memories));
   if (memoryWithOtherPlayer) {
@@ -183,6 +184,7 @@ export async function continueConversationMessage(
     `这段对话开始于 ${started.toLocaleString()}。现在是 ${now.toLocaleString()}。`,
   ];
   prompt.push(...agentPrompts(otherPlayer, agent, otherAgent ?? null));
+  prompt.push(...silentHumanListenerPrompt(otherPlayer, otherAgent ?? null));
   prompt.push(...relatedMemoriesPrompt(memories));
   prompt.push(
     `下面是你和 ${otherPlayer.name} 当前的聊天记录。`,
@@ -277,6 +279,18 @@ function agentPrompts(
     prompt.push(`关于 ${otherPlayer.name}：${otherAgent.identity}`);
   }
   return prompt;
+}
+
+function silentHumanListenerPrompt(
+  otherPlayer: { name: string; human?: string },
+  otherAgent: { identity: string; plan: string } | null,
+): string[] {
+  if (otherAgent || !otherPlayer.human) {
+    return [];
+  }
+  return [
+    `${otherPlayer.name} 正在安静听你说，不会主动发言。不要替 ${otherPlayer.name} 说话，也不要要求对方输入。`,
+  ];
 }
 
 function previousConversationPrompt(
