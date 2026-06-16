@@ -34,7 +34,7 @@ function buildSpyglassSprite(tileDim: number) {
   container.addChild(shadow);
 
   // Clean lookout-tower building from the Farm RPG pack.
-  addFarmLifeSprite(container, FARM_LIFE_BUILDING_SPRITES.lookoutTower, tileDim, 3.4, 0.2, 4.6);
+  addFarmLifeSprite(container, FARM_LIFE_BUILDING_SPRITES.lookoutTower, tileDim, 3.7, 0.0, 3.55);
 
   return container;
 }

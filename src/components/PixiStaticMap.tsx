@@ -6,20 +6,39 @@ import * as gentlesparkle from '../../data/animations/gentlesparkle.json';
 import * as gentlewaterfall from '../../data/animations/gentlewaterfall.json';
 import * as gentlesplash from '../../data/animations/gentlesplash.json';
 import * as windmill from '../../data/animations/windmill.json';
+import {
+  addGentleTile,
+  addGentleTree,
+  isGentleTreeBottom,
+  isGentleTreeTop,
+} from './gentleTownTiles';
 
-const animations = {
-  'campfire.json': { spritesheet: campfire, url: '/ai-town/assets/spritesheets/campfire.png' },
+type AnimationAsset = {
+  spritesheet: PIXI.ISpritesheetData;
+  url: string;
+};
+
+const animations: Record<string, AnimationAsset> = {
+  'campfire.json': {
+    spritesheet: campfire as unknown as PIXI.ISpritesheetData,
+    url: '/ai-town/assets/spritesheets/campfire.png',
+  },
   'gentlesparkle.json': {
-    spritesheet: gentlesparkle,
+    spritesheet: gentlesparkle as unknown as PIXI.ISpritesheetData,
     url: '/ai-town/assets/spritesheets/gentlesparkle32.png',
   },
   'gentlewaterfall.json': {
-    spritesheet: gentlewaterfall,
+    spritesheet: gentlewaterfall as unknown as PIXI.ISpritesheetData,
     url: '/ai-town/assets/spritesheets/gentlewaterfall32.png',
   },
-  'windmill.json': { spritesheet: windmill, url: '/ai-town/assets/spritesheets/windmill.png' },
-  'gentlesplash.json': { spritesheet: gentlesplash,
-    url: '/ai-town/assets/spritesheets/gentlewaterfall32.png',},
+  'windmill.json': {
+    spritesheet: windmill as unknown as PIXI.ISpritesheetData,
+    url: '/ai-town/assets/spritesheets/windmill.png',
+  },
+  'gentlesplash.json': {
+    spritesheet: gentlesplash as unknown as PIXI.ISpritesheetData,
+    url: '/ai-town/assets/spritesheets/gentlewaterfall32.png',
+  },
 };
 
 export const PixiStaticMap = PixiComponent('StaticMap', {
@@ -31,7 +50,7 @@ export const PixiStaticMap = PixiComponent('StaticMap', {
       scaleMode: PIXI.SCALE_MODES.NEAREST,
     });
 
-    const tiles = [];
+    const tiles: PIXI.Texture[] = [];
     for (let x = 0; x < numxtiles; x++) {
       for (let y = 0; y < numytiles; y++) {
         tiles[x + y * numxtiles] = new PIXI.Texture(
@@ -45,6 +64,7 @@ export const PixiStaticMap = PixiComponent('StaticMap', {
 
     const container = new PIXI.Container();
     const allLayers = [...map.bgTiles, ...map.objectTiles];
+    const useFarmRpgTerrain = map.tileSetUrl.includes('/farm-rpg/terrain/ai-town-terrain.png');
 
     // blit bg & object layers of map onto canvas
     for (let i = 0; i < screenxtiles * screenytiles; i++) {
@@ -58,6 +78,17 @@ export const PixiStaticMap = PixiComponent('StaticMap', {
         const tileIndex = layer[x][y];
         // Some layers may not have tiles at this location.
         if (tileIndex === -1) continue;
+        if (useFarmRpgTerrain) {
+          if (isGentleTreeTop(layer, x, y)) {
+            addGentleTree(container, map.tileDim, x, y);
+            continue;
+          }
+          if (isGentleTreeBottom(layer, x, y)) {
+            continue;
+          }
+          addGentleTile(container, tileIndex, map.tileDim, x, y);
+          continue;
+        }
         const ctile = new PIXI.Sprite(tiles[tileIndex]);
         ctile.x = xPx;
         ctile.y = yPx;
@@ -75,7 +106,7 @@ export const PixiStaticMap = PixiComponent('StaticMap', {
       spritesBySheet.get(sheet)!.push(sprite);
     }
     for (const [sheet, sprites] of spritesBySheet.entries()) {
-      const animation = (animations as any)[sheet];
+      const animation = animations[sheet];
       if (!animation) {
         console.error('Could not find animation', sheet);
         continue;
@@ -85,24 +116,29 @@ export const PixiStaticMap = PixiComponent('StaticMap', {
         scaleMode: PIXI.SCALE_MODES.NEAREST,
       });
       const spriteSheet = new PIXI.Spritesheet(texture, spritesheet);
-      spriteSheet.parse().then(() => {
-        for (const sprite of sprites) {
-          const pixiAnimation = spriteSheet.animations[sprite.animation];
-          if (!pixiAnimation) {
-            console.error('Failed to load animation', sprite);
-            continue;
+      void spriteSheet
+        .parse()
+        .then(() => {
+          for (const sprite of sprites) {
+            const pixiAnimation = spriteSheet.animations[sprite.animation];
+            if (!pixiAnimation) {
+              console.error('Failed to load animation', sprite);
+              continue;
+            }
+            const pixiSprite = new PIXI.AnimatedSprite(pixiAnimation);
+            pixiSprite.animationSpeed = 0.1;
+            pixiSprite.autoUpdate = true;
+            pixiSprite.x = sprite.x;
+            pixiSprite.y = sprite.y;
+            pixiSprite.width = sprite.w;
+            pixiSprite.height = sprite.h;
+            container.addChild(pixiSprite);
+            pixiSprite.play();
           }
-          const pixiSprite = new PIXI.AnimatedSprite(pixiAnimation);
-          pixiSprite.animationSpeed = 0.1;
-          pixiSprite.autoUpdate = true;
-          pixiSprite.x = sprite.x;
-          pixiSprite.y = sprite.y;
-          pixiSprite.width = sprite.w;
-          pixiSprite.height = sprite.h;
-          container.addChild(pixiSprite);
-          pixiSprite.play();
-        }
-      });
+        })
+        .catch((error: unknown) => {
+          console.error('Failed to parse animation sheet', sheet, error);
+        });
     }
 
     container.x = 0;

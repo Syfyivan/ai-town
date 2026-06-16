@@ -34,9 +34,9 @@ const BUILDING_VISUALS: Record<
   },
   blacksmith: {
     sprite: FARM_LIFE_BUILDING_SPRITES.forgeShop,
-    tileX: 1.75,
-    tileY: 1.08,
-    widthTiles: 5.8,
+    tileX: 2.25,
+    tileY: 0.78,
+    widthTiles: 4.55,
     signX: 4.55,
     signY: 6.12,
   },
@@ -50,9 +50,9 @@ const BUILDING_VISUALS: Record<
   },
   doctor: {
     sprite: FARM_LIFE_BUILDING_SPRITES.roofHouse,
-    tileX: 1.75,
-    tileY: 1.1,
-    widthTiles: 5.8,
+    tileX: 2.35,
+    tileY: 0.6,
+    widthTiles: 4.3,
     signX: 4.55,
     signY: 6.12,
   },
@@ -66,41 +66,41 @@ const BUILDING_VISUALS: Record<
   },
   fisher: {
     sprite: FARM_LIFE_BUILDING_SPRITES.roofHouse,
-    tileX: 1.75,
-    tileY: 1.1,
-    widthTiles: 5.8,
+    tileX: 2.35,
+    tileY: 0.6,
+    widthTiles: 4.3,
     signX: 4.55,
     signY: 6.12,
   },
   mage: {
     sprite: FARM_LIFE_BUILDING_SPRITES.stoneTower,
-    tileX: 2.25,
-    tileY: -0.15,
-    widthTiles: 4.85,
+    tileX: 2.75,
+    tileY: -0.85,
+    widthTiles: 3.65,
     signX: 4.55,
     signY: 6.92,
   },
   mayor: {
     sprite: FARM_LIFE_BUILDING_SPRITES.forgeShop,
-    tileX: 1.75,
-    tileY: 1.1,
-    widthTiles: 5.8,
+    tileX: 2.25,
+    tileY: 0.78,
+    widthTiles: 4.55,
     signX: 4.55,
     signY: 6.12,
   },
   rancher: {
     sprite: FARM_LIFE_BUILDING_SPRITES.roofHouse,
-    tileX: 1.75,
-    tileY: 1.1,
-    widthTiles: 5.8,
+    tileX: 2.35,
+    tileY: 0.6,
+    widthTiles: 4.3,
     signX: 4.55,
     signY: 6.12,
   },
   scientist: {
     sprite: FARM_LIFE_BUILDING_SPRITES.stoneTower,
-    tileX: 2.25,
-    tileY: -0.15,
-    widthTiles: 4.85,
+    tileX: 2.75,
+    tileY: -0.85,
+    widthTiles: 3.65,
     signX: 4.55,
     signY: 6.92,
   },
@@ -114,34 +114,24 @@ const BUILDING_VISUALS: Record<
   },
   tavernKeeper: {
     sprite: FARM_LIFE_BUILDING_SPRITES.roofHouse,
-    tileX: 2.35,
-    tileY: 1.08,
-    widthTiles: 6.2,
+    tileX: 3.05,
+    tileY: 0.58,
+    widthTiles: 4.85,
     signX: 5.55,
     signY: 6.15,
   },
 };
 
 function addPixelHouse(container: PIXI.Container, building: ProfessionBuilding, tileDim: number) {
-  const graphics = new PIXI.Graphics();
+  const shadow = new PIXI.Graphics();
   const width = building.region.width * tileDim;
   const visual = BUILDING_VISUALS[building.profession];
 
-  graphics.beginFill(0x181425, 0.18);
-  graphics.drawEllipse(width / 2, tileDim * 5.7, tileDim * 2.7, tileDim * 0.32);
-  graphics.endFill();
+  shadow.beginFill(0x181425, 0.18);
+  shadow.drawEllipse(width / 2, tileDim * 5.7, tileDim * 2.7, tileDim * 0.32);
+  shadow.endFill();
+  container.addChild(shadow);
 
-  graphics.lineStyle(2, 0x181425, 0.9);
-  graphics.beginFill(0xfec742);
-  graphics.drawRect(
-    tileDim * (visual.signX - 1.95),
-    tileDim * visual.signY,
-    tileDim * 3.9,
-    tileDim * 0.52,
-  );
-  graphics.endFill();
-
-  container.addChild(graphics);
   addFarmLifeSprite(
     container,
     visual.sprite,
@@ -150,6 +140,18 @@ function addPixelHouse(container: PIXI.Container, building: ProfessionBuilding, 
     visual.tileY,
     visual.widthTiles,
   );
+
+  const signBoard = new PIXI.Graphics();
+  signBoard.lineStyle(2, 0x181425, 0.9);
+  signBoard.beginFill(0xfec742);
+  signBoard.drawRect(
+    tileDim * (visual.signX - 1.95),
+    tileDim * visual.signY,
+    tileDim * 3.9,
+    tileDim * 0.52,
+  );
+  signBoard.endFill();
+  container.addChild(signBoard);
 
   const sign = new PIXI.Text(building.buildingName, {
     align: 'center',

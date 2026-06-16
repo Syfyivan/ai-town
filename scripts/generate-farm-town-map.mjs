@@ -23,7 +23,7 @@ const TILES = {
   wetSoil: frame(7, 0),
   grassSprig: frame(1, 1),
   flowerGold: frame(2, 1),
-  flowerBlue: frame(3, 1),
+  flowerBlue: frame(14, 1),
   flowerPurple: frame(4, 1),
   smallRock: frame(5, 1),
   stump: frame(6, 1),
@@ -34,7 +34,7 @@ const TILES = {
   grassClumpC: frame(11, 1),
   grassClumpD: frame(12, 1),
   mushroom: frame(13, 1),
-  flowerWhite: frame(14, 1),
+  flowerWhite: frame(15, 1),
   flowerPale: frame(15, 1),
 };
 

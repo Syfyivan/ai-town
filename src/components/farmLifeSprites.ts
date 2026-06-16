@@ -20,14 +20,14 @@ export const FARM_LIFE_BUILDING_SPRITES = {
   timberShop: { src: `${FARM_RPG}/house-1.png`, x: 0, y: 0, width: 128, height: 112 },
   // Red-roof studio/cottage used where the old tent art was still leaking through.
   houseStudio: { src: `${FARM_RPG}/house-3.png`, x: 0, y: 0, width: 128, height: 112 },
-  // Forge: leftmost (complete) building in the blacksmith sheet.
-  forgeShop: { src: `${FARM_RPG}/blacksmith.png`, x: 0, y: 0, width: 128, height: 112 },
+  // Forge: tight crop around the standalone shop, without adjacent sheet fragments.
+  forgeShop: { src: `${FARM_RPG}/blacksmith.png`, x: 4, y: 7, width: 72, height: 87 },
   // Wizard tower (purple roof + vines) for mage / scientist.
-  stoneTower: { src: `${FARM_RPG}/wizard-house.png`, x: 0, y: 0, width: 80, height: 155 },
+  stoneTower: { src: `${FARM_RPG}/wizard-house.png`, x: 10, y: 2, width: 60, height: 135 },
   // Cottage with roof for tavern, doctor, fisher, rancher, mayor…
   roofHouse: { src: `${FARM_RPG}/house-2.png`, x: 0, y: 0, width: 80, height: 112 },
   // Plain lookout tower for the spyglass / observatory building.
-  lookoutTower: { src: `${FARM_RPG}/wizard-house.png`, x: 160, y: 0, width: 80, height: 155 },
+  lookoutTower: { src: `${FARM_RPG}/wizard-house.png`, x: 170, y: 2, width: 60, height: 134 },
 } as const satisfies Record<string, FarmLifeSpriteRect>;
 
 function farmLifeTexture(rect: FarmLifeSpriteRect) {
