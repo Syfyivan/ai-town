@@ -24,6 +24,7 @@ import { MailboxLayer } from './MailboxLayer.tsx';
 import { ProfessionBuildingHotspot } from './ProfessionBuildingHotspot.tsx';
 import { PROFESSION_BUILDINGS, ProfessionId } from './professionCatalog.ts';
 import { FARM_ROAD_EXIT_REGION, FarmRoadHotspot } from './FarmRoadHotspot.tsx';
+import { toast } from 'react-toastify';
 
 type TileRegion = { x: number; y: number; width: number; height: number };
 
@@ -41,6 +42,10 @@ function tilePosition(position: Point) {
     x: Math.floor(position.x),
     y: Math.floor(position.y),
   };
+}
+
+function residentBusyMessage(residentName: string) {
+  return `${residentName}现在正忙着聊天，等一会儿再来找${residentName}吧。`;
 }
 
 export const PixiGame = (props: {
@@ -141,18 +146,26 @@ export const PixiGame = (props: {
     if (!humanPlayer || !npcPlayer || npcPlayer.human) {
       return;
     }
+    const npcName = props.game.playerDescriptions.get(playerId)?.name ?? '这个居民';
     const humanConversation = props.game.world.playerConversation(humanPlayer);
     const npcConversation = props.game.world.playerConversation(npcPlayer);
     if (humanConversation && npcConversation && humanConversation.id === npcConversation.id) {
       return;
     }
+    if (humanConversation) {
+      toast.info('你现在正忙着聊天，先结束当前对话再找其他居民吧。');
+      return;
+    }
+    if (npcConversation) {
+      toast.info(residentBusyMessage(npcName));
+      return;
+    }
     try {
-      const conversationId = await toastOnError(
-        startConversation({ playerId, invitee: humanPlayerId }),
-      );
-      await toastOnError(acceptInvite({ playerId: humanPlayerId, conversationId }));
-    } catch {
-      // toastOnError already surfaced the backend reason.
+      const conversationId = await startConversation({ playerId, invitee: humanPlayerId });
+      await acceptInvite({ playerId: humanPlayerId, conversationId });
+    } catch (error) {
+      console.warn('Could not start NPC conversation', error);
+      toast.info(residentBusyMessage(npcName));
     }
   };
 

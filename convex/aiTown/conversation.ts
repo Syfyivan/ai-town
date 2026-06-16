@@ -130,7 +130,7 @@ export class Conversation {
       return { error: reason };
     }
     if ([...game.world.conversations.values()].find((c) => c.participants.has(invitee.id))) {
-      const reason = `Player ${player.id} is already in a conversation`;
+      const reason = `Player ${invitee.id} is already in a conversation`;
       console.log(reason);
       return { error: reason };
     }
